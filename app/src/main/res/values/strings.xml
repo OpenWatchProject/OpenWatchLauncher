@@ -1,0 +1,33 @@
+<resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+    <string name="app_name">OpenWatch Launcher</string>
+
+    <string name="config_headlineFontFamily" translatable="false"></string>
+    <string name="notification_reply_button_accessibility">Reply</string>
+
+    <!-- Active Permission - accessibility support -->
+    <!-- Content description of the camera icon in the notification. [CHAR LIMIT=NONE] -->
+    <string name="notification_appops_camera_active">Camera</string>
+    <!-- Content description of the mic icon in the notification. [CHAR LIMIT=NONE] -->
+    <string name="notification_appops_microphone_active">Microphone</string>
+    <!-- Content description of the overlay icon in the notification. [CHAR LIMIT=NONE] -->
+    <string name="notification_appops_overlay_active">displaying over other apps on your screen</string>
+
+    <!-- Content description of the alerting icon in the notification. [CHAR_LIMIT=NONE] -->
+    <string name="notification_alerted_content_description">Alerted</string>
+
+    <!-- Content description of the work profile icon in the notification. -->
+    <string name="notification_work_profile_content_description">Work profile</string>
+
+    <!-- The divider symbol between different parts of the notification header. not translatable [CHAR LIMIT=1] -->
+    <string name="notification_header_divider_symbol" translatable="false">•</string>
+
+    <string name="config_bodyFontFamily" translatable="false">sans-serif</string>
+
+    <!-- Content description of the expand button icon in the notification when collaped.-->
+    <string name="expand_button_content_description_collapsed">Expand</string>
+
+    <string name="config_headlineFontFamilyMedium" translateable="false">@string/font_family_button_material</string>
+
+    <string name="font_family_button_material">sans-serif-medium</string>
+
+</resources>
