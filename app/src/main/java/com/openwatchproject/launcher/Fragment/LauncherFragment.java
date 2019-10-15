@@ -34,18 +34,13 @@ import com.openwatchproject.launcher.Model.Recent;
 import com.openwatchproject.launcher.Persistence.AppDatabase;
 import com.openwatchproject.launcher.R;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 
 import io.reactivex.CompletableObserver;
-import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.Consumer;
-import io.reactivex.observers.DisposableObserver;
 import io.reactivex.schedulers.Schedulers;
 
 import static com.openwatchproject.launcher.Utils.isSystemApp;
@@ -159,11 +154,11 @@ public class LauncherFragment extends Fragment {
 
         List<ResolveInfo> appList = pm.queryIntentActivities(i, 0);
         String launcherPackageName = getContext().getPackageName();
-        for (ResolveInfo app : appList) {
-            String packageName = app.activityInfo.packageName;
+        for (ResolveInfo activity : appList) {
+            String packageName = activity.activityInfo.packageName;
             if (launcherPackageName.equals(packageName)) continue;
-            Drawable icon = app.loadIcon(pm);
-            String title = app.loadLabel(pm).toString();
+            Drawable icon = activity.loadIcon(pm);
+            String title = activity.loadLabel(pm).toString();
             launcherItems.add(new LauncherItem(icon, title, packageName));
         }
 

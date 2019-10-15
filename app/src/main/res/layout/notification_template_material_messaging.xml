@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (C) 2016 The Android Open Source Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,23 +13,23 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License
   -->
-<com.android.internal.widget.MessagingLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<com.android.internal.widget.MessagingLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/status_bar_latest_event_content"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:clipChildren="false"
-    android:tag="messaging"
-    >
-    <include layout="@layout/notification_template_header"/>
+    android:tag="messaging">
+
+    <include layout="@layout/notification_template_header" />
+
     <com.android.internal.widget.RemeasuringLinearLayout
-            android:id="@+id/notification_action_list_margin_target"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="top"
-            android:layout_marginTop="@dimen/notification_content_margin_top"
-            android:clipToPadding="false"
-            android:orientation="vertical">
+        android:id="@+id/notification_action_list_margin_target"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_marginTop="@dimen/notification_content_margin_top"
+        android:clipToPadding="false"
+        android:orientation="vertical">
 
         <com.android.internal.widget.RemeasuringLinearLayout
             android:id="@+id/notification_main_column"
@@ -41,21 +40,25 @@
             android:layout_marginStart="@dimen/notification_content_margin_start"
             android:layout_marginEnd="@dimen/notification_content_margin_end"
             android:minHeight="@dimen/notification_min_content_height"
-            android:orientation="vertical"
-            >
+            android:orientation="vertical">
+
             <com.android.internal.widget.MessagingLinearLayout
                 android:id="@+id/notification_messaging"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:spacing="@dimen/notification_messaging_spacing" />
         </com.android.internal.widget.RemeasuringLinearLayout>
-        <include layout="@layout/notification_template_smart_reply_container"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/notification_content_margin"
-                android:layout_marginStart="@dimen/notification_content_margin_start"
-                android:layout_marginEnd="@dimen/notification_content_margin_end" />
+
+        <include
+            layout="@layout/notification_template_smart_reply_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/notification_content_margin"
+            android:layout_marginStart="@dimen/notification_content_margin_start"
+            android:layout_marginEnd="@dimen/notification_content_margin_end" />
+
         <include layout="@layout/notification_material_action_list" />
     </com.android.internal.widget.RemeasuringLinearLayout>
-    <include layout="@layout/notification_template_right_icon"/>
+
+    <include layout="@layout/notification_template_right_icon" />
 </com.android.internal.widget.MessagingLayout>

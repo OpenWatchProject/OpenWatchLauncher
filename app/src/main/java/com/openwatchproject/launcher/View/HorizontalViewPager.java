@@ -53,4 +53,14 @@ public class HorizontalViewPager extends ViewPager {
         return (verticalViewPager == null || verticalViewPager.getCurrentItem() == 1)
                 && super.onInterceptTouchEvent(ev);
     }
+
+    public void setPage(int horizontal, int vertical) {
+        if (getCurrentItem() != horizontal) {
+            setCurrentItem(horizontal);
+        }
+
+        if (verticalViewPager.getCurrentItem() != vertical) {
+            verticalViewPager.setCurrentItem(vertical);
+        }
+    }
 }

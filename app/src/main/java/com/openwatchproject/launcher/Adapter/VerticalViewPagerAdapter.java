@@ -22,8 +22,10 @@ public class VerticalViewPagerAdapter extends FragmentPagerAdapter {
     @Override
     public Fragment getItem(int position) {
         switch (position) {
-            case 0: return new QuickSettingsFragment();
-            case 1: return new ClockSkinFragment();
+            case 0:
+                return new QuickSettingsFragment();
+            case 1:
+                return new ClockSkinFragment();
         }
 
         return null; // This is never reached

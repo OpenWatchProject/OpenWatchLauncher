@@ -7,8 +7,6 @@ import android.content.IntentFilter;
 import android.graphics.Point;
 import android.os.BatteryManager;
 import android.os.Bundle;
-import android.telephony.CellInfo;
-import android.telephony.CellLocation;
 import android.telephony.PhoneStateListener;
 import android.telephony.ServiceState;
 import android.telephony.SignalStrength;
@@ -27,14 +25,10 @@ import androidx.fragment.app.Fragment;
 
 import com.openwatchproject.launcher.R;
 
-import java.util.List;
-
-import static android.telephony.PhoneStateListener.LISTEN_CELL_INFO;
 import static android.telephony.PhoneStateListener.LISTEN_DATA_CONNECTION_STATE;
 import static android.telephony.PhoneStateListener.LISTEN_NONE;
 import static android.telephony.PhoneStateListener.LISTEN_SERVICE_STATE;
 import static android.telephony.PhoneStateListener.LISTEN_SIGNAL_STRENGTHS;
-import static android.telephony.PhoneStateListener.LISTEN_USER_MOBILE_DATA_STATE;
 import static android.telephony.TelephonyManager.DATA_CONNECTED;
 import static android.telephony.TelephonyManager.DATA_CONNECTING;
 import static android.telephony.TelephonyManager.DATA_DISCONNECTED;
@@ -120,7 +114,7 @@ public class QuickSettingsFragment extends Fragment {
         }
     };
 
-    private PhoneStateListener phoneStateListener = new PhoneStateListener(){
+    private PhoneStateListener phoneStateListener = new PhoneStateListener() {
         @Override
         public void onSignalStrengthsChanged(SignalStrength signalStrength) {
             super.onSignalStrengthsChanged(signalStrength);

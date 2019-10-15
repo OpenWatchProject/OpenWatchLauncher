@@ -1,5 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
+<?xml version="1.0" encoding="utf-8"?><!--
   ~ Copyright (C) 2015 The Android Open Source Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,56 +15,57 @@
   -->
 
 <!-- Note: this layout is included from a view stub; layout attributes will be overridden. -->
-<LinearLayout
-        xmlns:android="http://schemas.android.com/apk/res/android"
-        android:id="@+id/notification_material_reply_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:paddingStart="@dimen/notification_content_margin_start">
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/notification_material_reply_container"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="@dimen/notification_content_margin_start">
 
     <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="1dip"
-            android:id="@+id/action_divider"
-            android:layout_marginTop="@dimen/notification_content_margin"
-            android:layout_marginBottom="@dimen/notification_content_margin"
-            android:layout_marginEnd="@dimen/notification_content_margin_end"
-            android:background="@drawable/notification_template_divider" />
+        android:layout_width="match_parent"
+        android:layout_height="1dip"
+        android:id="@+id/action_divider"
+        android:layout_marginTop="@dimen/notification_content_margin"
+        android:layout_marginBottom="@dimen/notification_content_margin"
+        android:layout_marginEnd="@dimen/notification_content_margin_end"
+        android:background="@drawable/notification_template_divider" />
 
     <TextView
-            android:id="@+id/notification_material_reply_text_3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/notification_content_margin_end"
-            android:visibility="gone"
-            android:fontFamily="@string/config_bodyFontFamily"
-            android:singleLine="true" />
+        android:id="@+id/notification_material_reply_text_3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/notification_content_margin_end"
+        android:visibility="gone"
+        android:fontFamily="@string/config_bodyFontFamily"
+        android:singleLine="true" />
 
     <TextView
-            android:id="@+id/notification_material_reply_text_2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginEnd="@dimen/notification_content_margin_end"
-            android:visibility="gone"
-            android:fontFamily="@string/config_bodyFontFamily"
-            android:singleLine="true" />
+        android:id="@+id/notification_material_reply_text_2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="@dimen/notification_content_margin_end"
+        android:visibility="gone"
+        android:fontFamily="@string/config_bodyFontFamily"
+        android:singleLine="true" />
 
     <LinearLayout
-            android:id="@+id/notification_material_reply_text_1_container"
+        android:id="@+id/notification_material_reply_text_1_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginEnd="@dimen/notification_content_margin_end">
+
+        <TextView
+            android:id="@+id/notification_material_reply_text_1"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginEnd="@dimen/notification_content_margin_end">
-        <TextView
-                android:id="@+id/notification_material_reply_text_1"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginEnd="@dimen/notification_content_margin_end"
-                android:layout_gravity="center"
-                android:fontFamily="@string/config_bodyFontFamily"
-                android:singleLine="true" />
+            android:layout_weight="1"
+            android:layout_marginEnd="@dimen/notification_content_margin_end"
+            android:layout_gravity="center"
+            android:fontFamily="@string/config_bodyFontFamily"
+            android:singleLine="true" />
+
         <ProgressBar
             android:id="@+id/notification_material_reply_progress"
             android:layout_height="@dimen/messaging_group_sending_progress_size"

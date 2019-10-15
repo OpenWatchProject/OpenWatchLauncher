@@ -34,8 +34,10 @@
         <item name="textSize">@dimen/notification_text_size</item>
     </style>
 
-    <style name="Widget.Material.TextView" parent="android:Widget.TextView"/>
-    <style name="Widget.Material.Light.TextView" parent="Widget.Material.TextView"/>
+    <style name="Widget.Material.TextView" parent="android:Widget.TextView" />
+
+    <style name="Widget.Material.Light.TextView" parent="Widget.Material.TextView" />
+
     <style name="Widget.Material.Notification.Text" parent="Widget.Material.Light.TextView">
         <item name="lineHeight">20sp</item>
         <item name="android:textAppearance">@style/TextAppearanceMaterialNotification</item>
@@ -50,7 +52,9 @@
     </style>
 
     <style name="Theme.DeviceDefault.Notification" parent="@style/Theme.Material.Notification">
-        <item name="notificationHeaderTextAppearance">@style/TextAppearance.DeviceDefault.Notification.Info</item>
+        <item name="notificationHeaderTextAppearance">
+            @style/TextAppearance.DeviceDefault.Notification.Info
+        </item>
     </style>
 
     <style name="TextAppearance.DeviceDefault.Notification.Info" parent="TextAppearanceMaterialNotificationInfo">
@@ -64,7 +68,9 @@
     <!-- Theme for inflating notifications -->
     <style name="Theme.Material.Notification" parent="">
         <item name="notificationHeaderStyle">@style/Notification.Header</item>
-        <item name="notificationHeaderTextAppearance">@android:style/TextAppearance.Material.Notification.Info</item>
+        <item name="notificationHeaderTextAppearance">
+            @android:style/TextAppearance.Material.Notification.Info
+        </item>
         <item name="notificationHeaderAppNameVisibility">visible</item>
         <item name="notificationHeaderIconSize">@dimen/notification_header_icon_size</item>
     </style>
@@ -91,7 +97,8 @@
     </style>
 
     <style name="Widget.DeviceDefault.Notification.MessagingName" parent="Widget.Material.Notification.MessagingName">
-        <item name="android:textAppearance">@style/TextAppearance.DeviceDefault.Notification.Title</item>
+        <item name="android:textAppearance">@style/TextAppearance.DeviceDefault.Notification.Title
+        </item>
     </style>
 
     <style name="Widget.Material.Notification.MessagingName" parent="Widget.Material.Light.TextView">

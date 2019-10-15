@@ -24,8 +24,6 @@ import com.openwatchproject.launcher.R;
 
 import java.util.List;
 
-import io.reactivex.Scheduler;
-import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.schedulers.Schedulers;
 
 public class LauncherAdapter extends ListAdapter<LauncherItem, LauncherAdapter.ViewHolder> {
