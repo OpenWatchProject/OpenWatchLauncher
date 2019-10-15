@@ -20,10 +20,7 @@ public class ClockSkinInfo {
     public ClockSkinInfo(File file) {
         this.file = file;
 
-        if (file.isDirectory()) {
-            this.isZipped = false;
-            this.preview = BitmapFactory.decodeFile(new File(file, ClockSkinConstants.CLOCK_SKIN_PREVIEW).getAbsolutePath());
-        } else {
+        if (file.isFile()) {
             this.isZipped = true;
             try (ZipFile clockskinZip = new ZipFile(file)) {
                 Enumeration<? extends ZipEntry> clockskinEntries = clockskinZip.entries();
@@ -36,6 +33,9 @@ public class ClockSkinInfo {
             } catch (IOException e) {
                 Log.e(TAG, "getClockskinPreview: Unable to decode preview", e);
             }
+        } else {
+            this.isZipped = false;
+            this.preview = BitmapFactory.decodeFile(new File(file, ClockSkinConstants.CLOCK_SKIN_PREVIEW).getAbsolutePath());
         }
     }
 
@@ -53,9 +53,9 @@ public class ClockSkinInfo {
 
     public boolean isValid() {
         if (isZipped) {
-            return file.exists();
+            return file.exists() && file.isFile();
         } else {
-            return file.list().length > 0;
+            return file.exists() && file.isDirectory() && file.list().length > 0;
         }
     }
 }

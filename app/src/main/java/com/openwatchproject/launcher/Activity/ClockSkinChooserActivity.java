@@ -38,7 +38,10 @@ public class ClockSkinChooserActivity extends AppCompatActivity {
         File clockskinFolder = new File(Environment.getExternalStorageDirectory(), "clockskin/");
 
         for (File f : clockskinFolder.listFiles()) {
-            clockSkinInfos.add(new ClockSkinInfo(f));
+            ClockSkinInfo clockSkinInfo = new ClockSkinInfo(f);
+            if (clockSkinInfo.isValid()) {
+                clockSkinInfos.add(clockSkinInfo);
+            }
         }
 
         return clockSkinInfos;
