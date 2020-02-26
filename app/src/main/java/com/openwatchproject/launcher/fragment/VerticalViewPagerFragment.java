@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Fragment;
+package com.openwatchproject.launcher.fragment;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -10,10 +10,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.openwatchproject.launcher.Adapter.VerticalViewPagerAdapter;
+import com.openwatchproject.launcher.adapter.VerticalViewPagerAdapter;
 import com.openwatchproject.launcher.R;
-import com.openwatchproject.launcher.View.HorizontalViewPager;
-import com.openwatchproject.launcher.View.VerticalViewPager;
+import com.openwatchproject.launcher.view.HorizontalViewPager;
+import com.openwatchproject.launcher.view.VerticalViewPager;
 
 public class VerticalViewPagerFragment extends Fragment {
 

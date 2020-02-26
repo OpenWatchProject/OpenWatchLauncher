@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Fragment;
+package com.openwatchproject.launcher.fragment;
 
 import android.content.Intent;
 import android.os.Bundle;

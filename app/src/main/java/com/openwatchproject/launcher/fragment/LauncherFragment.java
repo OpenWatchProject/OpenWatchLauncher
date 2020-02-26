@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Fragment;
+package com.openwatchproject.launcher.fragment;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -26,12 +26,12 @@ import androidx.room.Room;
 import androidx.wear.widget.WearableLinearLayoutManager;
 import androidx.wear.widget.WearableRecyclerView;
 
-import com.openwatchproject.launcher.Adapter.LauncherAdapter;
-import com.openwatchproject.launcher.Listener.LauncherItemClickListener;
-import com.openwatchproject.launcher.Listener.LauncherItemLongClickListener;
-import com.openwatchproject.launcher.Model.LauncherItem;
-import com.openwatchproject.launcher.Model.Recent;
-import com.openwatchproject.launcher.Persistence.AppDatabase;
+import com.openwatchproject.launcher.adapter.LauncherAdapter;
+import com.openwatchproject.launcher.listener.LauncherItemClickListener;
+import com.openwatchproject.launcher.listener.LauncherItemLongClickListener;
+import com.openwatchproject.launcher.model.LauncherItem;
+import com.openwatchproject.launcher.model.Recent;
+import com.openwatchproject.launcher.persistence.AppDatabase;
 import com.openwatchproject.launcher.R;
 
 import java.util.ArrayList;

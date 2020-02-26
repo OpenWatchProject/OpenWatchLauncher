@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Adapter;
+package com.openwatchproject.launcher.adapter;
 
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -16,10 +16,10 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.room.Room;
 import androidx.wear.widget.WearableRecyclerView;
 
-import com.openwatchproject.launcher.Listener.LauncherItemClickListener;
-import com.openwatchproject.launcher.Listener.LauncherItemLongClickListener;
-import com.openwatchproject.launcher.Model.LauncherItem;
-import com.openwatchproject.launcher.Persistence.AppDatabase;
+import com.openwatchproject.launcher.listener.LauncherItemClickListener;
+import com.openwatchproject.launcher.listener.LauncherItemLongClickListener;
+import com.openwatchproject.launcher.model.LauncherItem;
+import com.openwatchproject.launcher.persistence.AppDatabase;
 import com.openwatchproject.launcher.R;
 
 import java.util.List;

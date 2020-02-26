@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Model;
+package com.openwatchproject.launcher.model;
 
 import androidx.annotation.NonNull;
 import androidx.room.ColumnInfo;

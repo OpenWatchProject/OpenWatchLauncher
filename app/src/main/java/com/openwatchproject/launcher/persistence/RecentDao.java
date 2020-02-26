@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Persistence;
+package com.openwatchproject.launcher.persistence;
 
 import androidx.room.Dao;
 import androidx.room.Delete;
@@ -6,7 +6,7 @@ import androidx.room.Insert;
 import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 
-import com.openwatchproject.launcher.Model.Recent;
+import com.openwatchproject.launcher.model.Recent;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Adapter;
+package com.openwatchproject.launcher.adapter;
 
 import android.util.SparseArray;
 import android.view.ViewGroup;
@@ -8,8 +8,8 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
 
-import com.openwatchproject.launcher.Fragment.ClockSkinFragment;
-import com.openwatchproject.launcher.Fragment.QuickSettingsFragment;
+import com.openwatchproject.launcher.fragment.ClockSkinFragment;
+import com.openwatchproject.launcher.fragment.QuickSettingsFragment;
 
 public class VerticalViewPagerAdapter extends FragmentPagerAdapter {
     private SparseArray<Fragment> fragments;

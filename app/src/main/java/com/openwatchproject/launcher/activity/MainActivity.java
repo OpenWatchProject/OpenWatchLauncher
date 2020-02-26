@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Activity;
+package com.openwatchproject.launcher.activity;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -12,9 +12,9 @@ import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.PagerAdapter;
 
-import com.openwatchproject.launcher.Adapter.HorizontalViewPagerAdapter;
+import com.openwatchproject.launcher.adapter.HorizontalViewPagerAdapter;
 import com.openwatchproject.launcher.R;
-import com.openwatchproject.launcher.View.HorizontalViewPager;
+import com.openwatchproject.launcher.view.HorizontalViewPager;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";

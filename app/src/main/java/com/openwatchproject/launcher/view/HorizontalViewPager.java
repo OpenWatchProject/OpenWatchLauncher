@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.View;
+package com.openwatchproject.launcher.view;
 
 import android.content.Context;
 import android.graphics.Canvas;

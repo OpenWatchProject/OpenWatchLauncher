@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Model;
+package com.openwatchproject.launcher.model;
 
 import android.content.Context;
 import android.content.pm.PackageManager;

@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Activity;
+package com.openwatchproject.launcher.activity;
 
 import android.os.Bundle;
 import android.os.Environment;
@@ -7,7 +7,7 @@ import android.util.Log;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
 
-import com.openwatchproject.launcher.Adapter.ClockSkinPagerAdapter;
+import com.openwatchproject.launcher.adapter.ClockSkinPagerAdapter;
 import com.openwatchproject.launcher.ClockSkinInfo;
 import com.openwatchproject.launcher.R;
 
@@ -36,11 +36,14 @@ public class ClockSkinChooserActivity extends AppCompatActivity {
         List<ClockSkinInfo> clockSkinInfos = new ArrayList<>();
 
         File clockskinFolder = new File(Environment.getExternalStorageDirectory(), "clockskin/");
+        File[] fs = clockskinFolder.listFiles();
 
-        for (File f : clockskinFolder.listFiles()) {
-            ClockSkinInfo clockSkinInfo = new ClockSkinInfo(f);
-            if (clockSkinInfo.isValid()) {
-                clockSkinInfos.add(clockSkinInfo);
+        if (fs != null) {
+            for (File f : fs) {
+                ClockSkinInfo clockSkinInfo = new ClockSkinInfo(f);
+                if (clockSkinInfo.isValid()) {
+                    clockSkinInfos.add(clockSkinInfo);
+                }
             }
         }
 

@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Adapter;
+package com.openwatchproject.launcher.adapter;
 
 import android.util.SparseArray;
 import android.view.ViewGroup;
@@ -8,10 +8,10 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentPagerAdapter;
 
-import com.openwatchproject.launcher.Fragment.LauncherFragment;
-import com.openwatchproject.launcher.Fragment.NotificationsFragment;
-import com.openwatchproject.launcher.Fragment.SettingsFragment;
-import com.openwatchproject.launcher.Fragment.VerticalViewPagerFragment;
+import com.openwatchproject.launcher.fragment.LauncherFragment;
+import com.openwatchproject.launcher.fragment.NotificationsFragment;
+import com.openwatchproject.launcher.fragment.SettingsFragment;
+import com.openwatchproject.launcher.fragment.VerticalViewPagerFragment;
 
 public class HorizontalViewPagerAdapter extends FragmentPagerAdapter {
     private SparseArray<Fragment> fragments;

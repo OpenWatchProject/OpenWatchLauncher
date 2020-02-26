@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Listener;
+package com.openwatchproject.launcher.listener;
 
 import com.openwatchproject.launcher.ClockSkinInfo;
 

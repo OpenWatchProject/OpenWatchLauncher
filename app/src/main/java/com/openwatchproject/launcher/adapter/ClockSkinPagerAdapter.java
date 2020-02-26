@@ -1,4 +1,4 @@
-package com.openwatchproject.launcher.Adapter;
+package com.openwatchproject.launcher.adapter;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,7 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 
 import com.openwatchproject.launcher.ClockSkinInfo;
-import com.openwatchproject.launcher.Listener.ClockSkinInfoClickListener;
+import com.openwatchproject.launcher.listener.ClockSkinInfoClickListener;
 import com.openwatchproject.launcher.R;
 
 import java.util.List;
