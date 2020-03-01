@@ -9,7 +9,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 
-import com.openwatchproject.launcher.ClockSkinInfo;
+import com.openwatchproject.launcher.ClockSkin;
 import com.openwatchproject.launcher.listener.ClockSkinInfoClickListener;
 import com.openwatchproject.launcher.R;
 
@@ -18,10 +18,10 @@ import java.util.List;
 public class ClockSkinPagerAdapter extends PagerAdapter {
 
     private ClockSkinInfoClickListener clickListener;
-    private List<ClockSkinInfo> clockSkinInfos;
+    private List<ClockSkin> clockSkins;
 
-    public ClockSkinPagerAdapter(List<ClockSkinInfo> clockSkinInfos, ClockSkinInfoClickListener clickListener) {
-        this.clockSkinInfos = clockSkinInfos;
+    public ClockSkinPagerAdapter(List<ClockSkin> clockSkins, ClockSkinInfoClickListener clickListener) {
+        this.clockSkins = clockSkins;
         this.clickListener = clickListener;
     }
 
@@ -31,16 +31,16 @@ public class ClockSkinPagerAdapter extends PagerAdapter {
         View view = LayoutInflater.from(container.getContext())
                 .inflate(R.layout.clockskin_item, container, false);
 
-        ClockSkinInfo clockSkinInfo = clockSkinInfos.get(position);
+        ClockSkin clockSkin = clockSkins.get(position);
 
         TextView name = view.findViewById(R.id.name);
         name.setSelected(true);
         ImageView preview = view.findViewById(R.id.preview);
         ImageView removeButton = view.findViewById(R.id.remove_button);
 
-        name.setText(clockSkinInfo.getFile().getName());
-        preview.setImageBitmap(clockSkinInfo.getPreview());
-        view.setOnClickListener(v -> clickListener.onClick(clockSkinInfo));
+        name.setText(clockSkin.getFile().getName());
+        preview.setImageBitmap(clockSkin.getPreview());
+        view.setOnClickListener(v -> clickListener.onClick(clockSkin));
 
         container.addView(view);
         return view;
@@ -53,7 +53,7 @@ public class ClockSkinPagerAdapter extends PagerAdapter {
 
     @Override
     public int getCount() {
-        return clockSkinInfos.size();
+        return clockSkins.size();
     }
 
     @Override
