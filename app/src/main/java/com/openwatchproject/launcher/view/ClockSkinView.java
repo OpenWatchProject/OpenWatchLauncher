@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Canvas;
+import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.BatteryManager;
 import android.os.SystemClock;
@@ -25,9 +26,11 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
+import java.util.TimeZone;
 
 public class ClockSkinView extends View {
     private static final String TAG = "ClockSkinView";
@@ -52,6 +55,9 @@ public class ClockSkinView extends View {
             switch (intent.getAction()) {
                 case Intent.ACTION_BATTERY_CHANGED:
                     updateBatteryStatus(intent);
+                    break;
+                case Intent.ACTION_TIMEZONE_CHANGED:
+                    updateTimeZone();
                     break;
             }
         }
@@ -94,8 +100,10 @@ public class ClockSkinView extends View {
         if (!registered) {
             registered = true;
 
-            IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
-            Intent batteryStatus = context.registerReceiver(receiver, ifilter);
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(Intent.ACTION_BATTERY_CHANGED);
+            intentFilter.addAction(Intent.ACTION_TIMEZONE_CHANGED);
+            Intent batteryStatus = context.registerReceiver(receiver, intentFilter);
             updateBatteryStatus(batteryStatus);
         }
     }
@@ -127,6 +135,14 @@ public class ClockSkinView extends View {
         int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
         int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
         this.batteryPercentage =  Math.round((float) (level * 100) / (float) scale);
+    }
+
+    private void updateTimeZone() {
+        TimeZone timeZone = TimeZone.getDefault();
+        calendar.setTimeZone(timeZone);
+        for (ClockSkinItem clockSkinItem : clockSkin.getClockSkinItems()) {
+            clockSkinItem.setTimeZone(timeZone);
+        }
     }
 
     private final Runnable ticker = new Runnable() {
@@ -871,6 +887,7 @@ public class ClockSkinView extends View {
                     } else if (invertDirection) {
                         clockSkinItem.setDirection(ClockSkinConstants.DIRECTION_REVERT);
                     }
+                    clockSkinItem.setTimeZone(calendar.getTimeZone());
                     clockSkin.addClockSkinItem(clockSkinItem);
                     Log.d(TAG, "parseClockSkin: finished parsing drawable");
                 }
@@ -919,6 +936,11 @@ public class ClockSkinView extends View {
 
             switch (parser.getName()) {
                 case ClockSkinConstants.TAG_NAME:
+                    String repeat = parser.getAttributeValue(null, "repeat");
+                    if (repeat != null) {
+                        Log.d(TAG, "parseDrawableTag: repeat = " + repeat);
+                        clockSkinItem.setRepeat(Integer.valueOf(repeat));
+                    }
                     String name = parser.nextText();
                     Log.d(TAG, "parseDrawableTag: name = " + name);
                     clockSkinItem.setName(name);
@@ -1018,6 +1040,10 @@ public class ClockSkinView extends View {
                     Log.d(TAG, "parseDrawableTag: range = " + range);
                     clockSkinItem.setRange(Integer.valueOf(range));
                     break;
+                case ClockSkinConstants.TAG_FRAMERATE:
+                    String framerate = parser.nextText();
+                    Log.d(TAG, "parseDrawableTag: framerate = " + framerate);
+                    clockSkinItem.setFramerate(Double.parseDouble(framerate));
             }
         }
 

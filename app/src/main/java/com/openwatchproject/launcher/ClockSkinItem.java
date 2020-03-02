@@ -2,9 +2,13 @@ package com.openwatchproject.launcher;
 
 import android.graphics.drawable.Drawable;
 
+import java.sql.Time;
 import java.util.List;
+import java.util.TimeZone;
 
 public class ClockSkinItem {
+    private static final String TAG = "ClockSkinItem";
+
     private int arrayType;
     private int range;
     private int centerX;
@@ -27,7 +31,7 @@ public class ClockSkinItem {
     private int progressRadius;
     private String progressStroken;
     private Drawable pictureShadow;
-    private int framerate;
+    private int frameDuration;
     private String className;
     private String packageName;
     private String childFolder;
@@ -36,24 +40,20 @@ public class ClockSkinItem {
     private int width;
     private int radius;
     private int rotateMode;
-
+    private int repeat;
+    private TimeZone timeZone;
 
     public ClockSkinItem() {
-        this.name = null;
-        this.centerX = 0;
-        this.centerY = 0;
-        this.rotate = 0;
-        this.angle = 0;
-        this.arrayType = 0;
         this.mulRotate = 1;
-        this.color = 0;
         this.width = 5;
         this.radius = 50;
-        this.startAngle = 0;
         this.direction = 1;
         this.textSize = 18;
-        this.colorArray = null;
         this.rotateMode = 3;
+    }
+
+    public void setTimeZone(TimeZone timeZone) {
+        this.timeZone = timeZone;
     }
 
     public float getAngle() {
@@ -125,6 +125,13 @@ public class ClockSkinItem {
     }
 
     public Drawable getDrawable() {
+        if (isAnimation()) {
+            long now = System.currentTimeMillis();
+            now += timeZone.getOffset(now);
+            int frame = (int) (Math.floor(now / frameDuration) % drawables.size());
+            return drawables.get(frame);
+        }
+
         return drawable;
     }
 
@@ -244,12 +251,8 @@ public class ClockSkinItem {
         this.pictureShadow = pictureShadow;
     }
 
-    public int getFramerate() {
-        return framerate;
-    }
-
-    public void setFramerate(int framerate) {
-        this.framerate = framerate;
+    public void setFramerate(double framerate) {
+        this.frameDuration = (int) Math.round((double) 1000 / framerate);
     }
 
     public String getClassName() {
@@ -274,5 +277,17 @@ public class ClockSkinItem {
 
     public void setChildFolder(String childFolder) {
         this.childFolder = childFolder;
+    }
+
+    public void setRepeat(int repeat) {
+        this.repeat = repeat;
+    }
+
+    public int getRepeat() {
+        return repeat;
+    }
+
+    public boolean isAnimation() {
+        return frameDuration != 0;
     }
 }
