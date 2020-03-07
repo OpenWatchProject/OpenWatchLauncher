@@ -15,6 +15,7 @@ import android.view.Display;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
@@ -35,7 +36,6 @@ import org.w3c.dom.NodeList;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.List;
@@ -44,7 +44,7 @@ import java.util.zip.ZipFile;
 
 public class ClockSkinFragment extends Fragment {
     private static final String TAG = "ClockSkinFragment";
-    public static final int REQUEST_CODE_CHOOSE_CLOCK_SKIN = 1;
+    private static final int REQUEST_CODE_CHOOSE_CLOCK_SKIN = 1;
 
     private ClockSkinView clockSkinView;
 
@@ -61,8 +61,8 @@ public class ClockSkinFragment extends Fragment {
 
         this.clockSkinView = (ClockSkinView) view;
         this.clockSkinView.setOnLongClickListener(view1 -> {
-            Intent clockskinChooserIntent = new Intent(getContext(), ClockSkinChooserActivity.class);
-            startActivityForResult(clockskinChooserIntent, REQUEST_CODE_CHOOSE_CLOCK_SKIN);
+            Intent clockSkinChooserIntent = new Intent(getContext(), ClockSkinChooserActivity.class);
+            startActivityForResult(clockSkinChooserIntent, REQUEST_CODE_CHOOSE_CLOCK_SKIN);
             return true;
         });
 
@@ -92,9 +92,7 @@ public class ClockSkinFragment extends Fragment {
     }
 
     private int getMinDisplaySize() {
-        Display display = getActivity().getWindowManager().getDefaultDisplay();
-        Point size = new Point();
-        display.getRealSize(size);
+        Point size = getDisplaySize();
         return Math.min(size.x, size.y);
     }
 
@@ -147,9 +145,16 @@ public class ClockSkinFragment extends Fragment {
 
     public void loadWatchFace() {
         File clockskinFolder = new File(Environment.getExternalStorageDirectory(), "clockskin/");
-        File[] fs = clockskinFolder.listFiles();
-        ClockSkin clockSkin = new ClockSkin(fs[0]);
-        clockSkinView.setClockSkin(clockSkin);
+        if (clockskinFolder.exists()) {
+            File[] fs = clockskinFolder.listFiles();
+            if (fs.length > 0) {
+                ClockSkin clockSkin = new ClockSkin(fs[0]);
+                clockSkinView.setClockSkin(clockSkin);
+                return;
+            }
+        }
+
+        Toast.makeText(getContext(), "Storage permissions not granted, or no valid ClockSkin was found.", Toast.LENGTH_LONG).show();
     }
 
     private ClockInfo parseDrawable(Element drawable) {

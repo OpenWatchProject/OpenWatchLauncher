@@ -13,6 +13,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
@@ -22,7 +23,10 @@ public class ClockSkin {
     private File file;
     private Bitmap preview;
 
-    private ArrayList<ClockSkinItem> clockSkinItems;
+    private List<ClockSkinItem> clockSkinItems;
+    private List<ClockSkinItem> touchClockSkinItems;
+    private int width;
+    private int height;
 
     public ClockSkin(File file) {
         this.file = file;
@@ -33,6 +37,8 @@ public class ClockSkin {
                 if (previewEntry != null) {
                     try (InputStream is = clockSkinZip.getInputStream(previewEntry)) {
                         this.preview = BitmapFactory.decodeStream(is);
+                    } catch (NullPointerException e) {
+                        Log.d(TAG, "ClockSkin: ");
                     }
                 }
             } catch (IOException e) {
@@ -41,6 +47,14 @@ public class ClockSkin {
         } else {
             this.preview = BitmapFactory.decodeFile(new File(file, ClockSkinConstants.CLOCK_SKIN_PREVIEW).getAbsolutePath());
         }
+    }
+
+    public void setWidth(int width) {
+        this.width = width;
+    }
+
+    public void setHeight(int height) {
+        this.height = height;
     }
 
     public File getFile() {
@@ -75,15 +89,27 @@ public class ClockSkin {
     }
 
     public void addClockSkinItem(ClockSkinItem clockSkinItem) {
-        if (clockSkinItems == null) {
-            clockSkinItems = new ArrayList<>();
-        }
+        if (clockSkinItem.getArrayType() == 100) {
+            if (touchClockSkinItems == null) {
+                touchClockSkinItems = new ArrayList<>();
+            }
 
-        clockSkinItems.add(clockSkinItem);
+            touchClockSkinItems.add(clockSkinItem);
+        } else {
+            if (clockSkinItems == null) {
+                clockSkinItems = new ArrayList<>();
+            }
+
+            clockSkinItems.add(clockSkinItem);
+        }
     }
 
-    public ArrayList<ClockSkinItem> getClockSkinItems() {
+    public List<ClockSkinItem> getClockSkinItems() {
         return clockSkinItems;
+    }
+
+    public List<ClockSkinItem> getTouchClockSkinItems() {
+        return touchClockSkinItems;
     }
 
     public boolean isValid() {

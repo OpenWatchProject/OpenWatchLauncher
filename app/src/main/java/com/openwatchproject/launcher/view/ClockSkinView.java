@@ -1,11 +1,13 @@
 package com.openwatchproject.launcher.view;
 
+import android.annotation.SuppressLint;
+import android.content.ActivityNotFoundException;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Canvas;
-import android.graphics.drawable.AnimationDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.BatteryManager;
 import android.os.SystemClock;
@@ -13,6 +15,7 @@ import android.text.format.DateFormat;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.util.Xml;
+import android.view.MotionEvent;
 import android.view.View;
 
 import androidx.annotation.Nullable;
@@ -20,13 +23,13 @@ import androidx.annotation.Nullable;
 import com.openwatchproject.launcher.ClockSkin;
 import com.openwatchproject.launcher.ClockSkinConstants;
 import com.openwatchproject.launcher.ClockSkinItem;
+import com.openwatchproject.launcher.SystemHelper;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.sql.Time;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
@@ -38,6 +41,7 @@ public class ClockSkinView extends View {
     private Context context;
     private Calendar calendar;
     private ClockSkin clockSkin;
+    private List<ClockSkinItem> touchItems;
 
     private boolean registered;
 
@@ -47,7 +51,6 @@ public class ClockSkinView extends View {
     private int viewCenterY;
 
     private boolean shouldRunTicker;
-    private boolean stopTicking;
 
     private final BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
@@ -86,11 +89,13 @@ public class ClockSkinView extends View {
     private void constructView(Context context) {
         this.context = context;
         this.calendar = Calendar.getInstance();
+
+        setOnTouchListener(onTouchListener);
     }
 
     public void setClockSkin(ClockSkin clockSkin) {
-        parseClockSkin(clockSkin);
-        this.clockSkin = clockSkin;
+        this.touchItems = new ArrayList<>();
+        this.clockSkin = parseClockSkin(clockSkin);
     }
 
     @Override
@@ -127,6 +132,60 @@ public class ClockSkinView extends View {
         this.viewCenterY = h / 2;
     }
 
+    private final View.OnTouchListener onTouchListener = new OnTouchListener() {
+        @SuppressLint("WrongConstant")
+        @Override
+        public boolean onTouch(View v, MotionEvent event) {
+            if (event.getAction() == MotionEvent.ACTION_UP) {
+                v.performClick();
+
+                float x = event.getX();
+                float y = event.getY();
+
+                if (clockSkin != null) {
+                    List<ClockSkinItem> touchClockSkinItems = clockSkin.getTouchClockSkinItems();
+                    if (touchClockSkinItems != null) {
+                        for (ClockSkinItem item : touchClockSkinItems) {
+                            int centerX = item.getCenterX();
+                            int centerY = item.getCenterY();
+                            int range = item.getRange();
+
+                            int x1 = viewCenterX + centerX;
+                            int y1 = viewCenterY + centerY;
+
+                            if (distance(x, y, x1, y1) <= range) {
+                                String packageName = item.getPackageName();
+                                String className = item.getClassName();
+
+                                if (packageName != null && className != null) {
+                                    Intent i = new Intent();
+                                    i.setComponent(new ComponentName(packageName, className));
+                                    i.setFlags(270532608); // TODO: Fix me!
+                                    try {
+                                        context.startActivity(i);
+                                    } catch (ActivityNotFoundException e) {
+                                        Log.d(TAG, "onTouch: tried to open a non-existant activity: packageName = " + packageName + ", className = " + className);
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+    };
+
+    private int distance(float x1, float y1, float x2, float y2) {
+        float x = x2 - x1;
+        float y = y2 - y1;
+
+        return (int) Math.round(Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)));
+    }
+
     private void updateBatteryStatus(Intent batteryStatus) {
         int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
         this.isBatteryCharging = status == BatteryManager.BATTERY_STATUS_CHARGING ||
@@ -147,13 +206,10 @@ public class ClockSkinView extends View {
 
     private final Runnable ticker = new Runnable() {
         public void run() {
-            if (stopTicking) {
-                return; // Test disabled the clock ticks
-            }
             onTimeChanged();
 
             long now = SystemClock.uptimeMillis();
-            long next = now + (16 - now % 16);
+            long next = now + ((1000 / 60) - now % (1000 / 60));
 
             getHandler().postAtTime(ticker, next);
         }
@@ -174,7 +230,6 @@ public class ClockSkinView extends View {
 
     private void onTimeChanged() {
         postInvalidateOnAnimation();
-
     }
 
     @Override
@@ -193,36 +248,54 @@ public class ClockSkinView extends View {
                         drawArrayMonthDay(canvas, item);
                         break;
                     case ClockSkinConstants.ARRAY_MONTH:
-                        drawArrayMonth(canvas, item);
+                        int month = calendar.get(Calendar.MONTH);
+                        drawArraySingle(canvas, item, month);
                         break;
                     case ClockSkinConstants.ARRAY_DAY:
-                        drawArrayDay(canvas, item);
+                        int day = calendar.get(Calendar.DAY_OF_MONTH);
+                        drawArrayDouble(canvas, item, day / 10, day % 10);
                         break;
                     case ClockSkinConstants.ARRAY_WEEKDAY:
-                        drawArrayWeekDay(canvas, item);
+                        int weekDay = calendar.get(Calendar.DAY_OF_WEEK) - 1;
+                        drawArraySingle(canvas, item, weekDay);
                         break;
                     case ClockSkinConstants.ARRAY_HOUR_MINUTE:
                         drawArrayHourMinute(canvas, item);
                         break;
                     case ClockSkinConstants.ARRAY_HOUR:
-                        drawArrayHour(canvas, item);
+                        int hour = calendar.get(Calendar.HOUR_OF_DAY);
+                        if (!DateFormat.is24HourFormat(context)) {
+                            hour = hour % 12;
+                            if (hour == 0) {
+                                hour = 12;
+                            }
+                        }
+                        drawArrayDouble(canvas, item, hour / 10, hour % 10);
                         break;
                     case ClockSkinConstants.ARRAY_MINUTE:
-                        drawArrayMinute(canvas, item);
+                        int minute = calendar.get(Calendar.MINUTE);
+                        drawArrayDouble(canvas, item, minute / 10, minute % 10);
                         break;
                     case ClockSkinConstants.ARRAY_SECOND:
-                        drawArraySecond(canvas, item);
+                        int second = calendar.get(Calendar.SECOND);
+                        drawArrayDouble(canvas, item, second / 10, second % 10);
                         break;
                     case ClockSkinConstants.ARRAY_WEATHER:
+                        int weatherIcon = SystemHelper.getWeatherIcon(context);
+                        Log.d(TAG, "onDraw: weatherIcon = " + weatherIcon);
 
                         break;
                     case ClockSkinConstants.ARRAY_TEMPERATURE:
-
+                        drawArrayTemperature(canvas, item);
                         break;
                     case ClockSkinConstants.ARRAY_STEPS:
+                        int steps = SystemHelper.getSteps(context);
+                        Log.d(TAG, "onDraw: steps = " + steps);
 
                         break;
                     case ClockSkinConstants.ARRAY_HEART_RATE:
+                        int heartRate = SystemHelper.getHeartRate(context);
+                        Log.d(TAG, "onDraw: heartRate = " + heartRate);
 
                         break;
                     case ClockSkinConstants.ARRAY_BATTERY:
@@ -262,7 +335,7 @@ public class ClockSkinView extends View {
 
                         break;
                     case ClockSkinConstants.ARRAY_TAP_ACTION:
-
+                        // Handled on parse
                         break;
                     case ClockSkinConstants.ARRAY_DISTANCE_2:
 
@@ -285,64 +358,77 @@ public class ClockSkinView extends View {
                 break;
             case ClockSkinConstants.ROTATE_HOUR:
                 float analogHour = (float) calendar.get(Calendar.HOUR) + ((float) calendar.get(Calendar.MINUTE) / (float) 60) + ((float) calendar.get(Calendar.SECOND) / (float) 60 / (float) 60);
-                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERT) {
-                    analogHour = -analogHour;
-                }
-                drawHourHand(canvas, item, analogHour);
+                float hourAngle = item.getAngle() + (item.getMulRotate() * ((float) analogHour * (float) 360 / (float) 12));
+                drawHand(canvas, item, hourAngle);
                 break;
             case ClockSkinConstants.ROTATE_MINUTE:
                 float analogMinute = (float) calendar.get(Calendar.MINUTE) + ((float) calendar.get(Calendar.SECOND) / (float) 60);
-                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERT) {
-                    analogMinute = -analogMinute;
-                }
-                drawMinuteHand(canvas, item, analogMinute);
+                float minuteAngle = item.getAngle() + (item.getMulRotate() * ((float) analogMinute / (float) 60 * 360));
+                drawHand(canvas, item, minuteAngle);
                 break;
             case ClockSkinConstants.ROTATE_SECOND:
-                float analogSecond = (float) calendar.get(Calendar.SECOND) + ((float) calendar.get(Calendar.MILLISECOND) / 1000);
-                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERT) {
+                float analogSecond = (float) calendar.get(Calendar.SECOND) + ((float) calendar.get(Calendar.MILLISECOND) / (float) 1000);
+                int mulRotate = item.getMulRotate();
+                if (mulRotate > 0) {
+                    //analogSecond *= mulRotate;
+                } else if (mulRotate < 0){
+                    //analogSecond /= (float) mulRotate;
+                }
+                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERSE) {
                     analogSecond = -analogSecond;
                 }
-                drawSecondHand(canvas, item, analogSecond);
+                float secondAngle = item.getAngle() + (item.getMulRotate() * ((float) analogSecond / (float) 60 * 360));
+                drawHand(canvas, item, secondAngle);
                 break;
             case ClockSkinConstants.ROTATE_MONTH:
                 int month = calendar.get(Calendar.MONTH) + 1; // Calendar.MONTH starts at 0
-                drawMonthHand(canvas, item, month);
+                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERSE) {
+                    month = -month;
+                }
+                float monthAngle = item.getAngle() + (item.getMulRotate() * ((float) month / (float) 12 * 360));
+                drawHand(canvas, item, monthAngle);
                 break;
-            case ClockSkinConstants.ROTATE_WEEK:
-                int week = calendar.get(Calendar.DAY_OF_WEEK) - 2; // Sunday = -2, Monday = -1, Tuesday = 0, etc
-                drawWeekHand(canvas, item, week);
+            case ClockSkinConstants.ROTATE_DAY_OF_WEEK:
+                int dayOfWeek = calendar.get(Calendar.DAY_OF_WEEK) - 2; // Sunday = -2, Monday = -1, Tuesday = 0, etc
+                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERSE) {
+                    dayOfWeek = -dayOfWeek;
+                }
+                float dayOfWeekAngle = item.getAngle() + (item.getMulRotate() * ((float) dayOfWeek / (float) 7 * 360));
+                drawHand(canvas, item, dayOfWeekAngle);
                 break;
             case ClockSkinConstants.ROTATE_BATTERY:
                 int battery = batteryPercentage;
-                drawBatteryHand(canvas, item, battery);
+                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERSE) {
+                    battery = -battery;
+                }
+                float batteryAngle = item.getAngle() + (item.getMulRotate() * ((float) battery / (float) 100 * 180));
+                drawHand(canvas, item, batteryAngle);
                 break;
             case ClockSkinConstants.ROTATE_DAY_NIGHT:
                 float hour24 = calendar.get(Calendar.HOUR_OF_DAY) + ((float) calendar.get(Calendar.MINUTE) / (float) 60) + ((float) calendar.get(Calendar.SECOND) / (float) 60 / (float) 60);
-                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERT) {
-                    //hour24 = -hour24;
+                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERSE) {
+                    hour24 = -hour24;
                 }
-                drawHour24Hand(canvas, item, hour24);
+                float hour24Angle = item.getAngle() + (item.getMulRotate() * ((float) hour24 / (float) 24 * 360));
+                drawHand(canvas, item, hour24Angle);
                 break;
-            case ClockSkinConstants.ROTATE_HOUR_SHADOW:
+            case ClockSkinConstants.ROTATE_HOUR_SHADOW: // TODO: Fix me!
                 float analogHourShadow = (float) calendar.get(Calendar.HOUR) + ((float) calendar.get(Calendar.MINUTE) / (float) 60) + ((float) calendar.get(Calendar.SECOND) / (float) 60 / (float) 60);
-                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERT) {
-                    //analogHourShadow = -analogHourShadow;
-                }
-                drawHourHandShadow(canvas, item, analogHourShadow);
+                float hourShadowAngle = item.getAngle() + (item.getMulRotate() * ((float) analogHourShadow * (float) 360 / (float) 12));
+                drawHand(canvas, item, hourShadowAngle);
                 break;
-            case ClockSkinConstants.ROTATE_MINUTE_SHADOW:
+            case ClockSkinConstants.ROTATE_MINUTE_SHADOW: // TODO: Fix me!
                 float analogMinuteShadow = (float) calendar.get(Calendar.MINUTE) + ((float) calendar.get(Calendar.SECOND) / (float) 60);
-                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERT) {
-                    //analogMinuteShadow = -analogMinuteShadow;
-                }
-                drawMinuteHandShadow(canvas, item, analogMinuteShadow);
+                float minuteShadowAngle = item.getAngle() + (item.getMulRotate() * ((float) analogMinuteShadow / (float) 60 * 360));
+                drawHand(canvas, item, minuteShadowAngle);
                 break;
-            case ClockSkinConstants.ROTATE_SECOND_SHADOW:
+            case ClockSkinConstants.ROTATE_SECOND_SHADOW: // TODO: Fix me!
                 float analogSecondShadow = (float) calendar.get(Calendar.SECOND) + ((float) calendar.get(Calendar.MILLISECOND) / 1000);
-                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERT) {
+                if (item.getDirection() == ClockSkinConstants.DIRECTION_REVERSE) {
                     analogSecondShadow = -analogSecondShadow;
                 }
-                drawSecondHandShadow(canvas, item, analogSecondShadow);
+                float secondShadowAngle = item.getAngle() + (item.getMulRotate() * ((float) analogSecondShadow / (float) 60 * 360));
+                drawHand(canvas, item, secondShadowAngle);
                 break;
             case ClockSkinConstants.ROTATE_BATTERY_CIRCLE:
 
@@ -427,10 +513,9 @@ public class ClockSkinView extends View {
         }
     }
 
-    private void drawArrayMonth(Canvas canvas, ClockSkinItem item) {
+    private void drawArraySingle(Canvas canvas, ClockSkinItem item, int value) {
         List<Drawable> drawables = item.getDrawables();
-        int month = calendar.get(Calendar.MONTH);
-        Drawable drawable = drawables.get(month);
+        Drawable drawable = drawables.get(value);
 
         if (true) {
             int width = drawable.getIntrinsicWidth();
@@ -440,32 +525,18 @@ public class ClockSkinView extends View {
         }
     }
 
-    private void drawArrayDay(Canvas canvas, ClockSkinItem item) {
+    private void drawArrayDouble(Canvas canvas, ClockSkinItem item, int value1, int value2) {
         List<Drawable> drawables = item.getDrawables();
-        int day = calendar.get(Calendar.DAY_OF_MONTH);
-        Drawable d10 = drawables.get(day / 10);
-        Drawable d1 = drawables.get(day % 10);
+        Drawable drawable1 = drawables.get(value1);
+        Drawable drawable2 = drawables.get(value2);
 
         if (true) {
-            int width = d10.getIntrinsicWidth();
-            int height = d10.getIntrinsicHeight();
-            d10.setBounds((viewCenterX + item.getCenterX()) - width, (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()), viewCenterY + item.getCenterY() + (height / 2));
-            d10.draw(canvas);
-            d1.setBounds((viewCenterX + item.getCenterX()), (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()) + width, viewCenterY + item.getCenterY() + (height / 2));
-            d1.draw(canvas);
-        }
-    }
-
-    private void drawArrayWeekDay(Canvas canvas, ClockSkinItem item) {
-        List<Drawable> drawables = item.getDrawables();
-        int weekDay = calendar.get(Calendar.DAY_OF_WEEK) - 1;
-        Drawable drawable = drawables.get(weekDay);
-
-        if (true) {
-            int width = drawable.getIntrinsicWidth();
-            int height = drawable.getIntrinsicHeight();
-            drawable.setBounds((viewCenterX + item.getCenterX()) - (width / 2), (viewCenterY + item.getCenterY()) - (height / 2), viewCenterX + item.getCenterX() + (width / 2), viewCenterY + item.getCenterY() + (height / 2));
-            drawable.draw(canvas);
+            int width = drawable1.getIntrinsicWidth();
+            int height = drawable1.getIntrinsicHeight();
+            drawable1.setBounds((viewCenterX + item.getCenterX()) - width, (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()), viewCenterY + item.getCenterY() + (height / 2));
+            drawable1.draw(canvas);
+            drawable2.setBounds((viewCenterX + item.getCenterX()), (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()) + width, viewCenterY + item.getCenterY() + (height / 2));
+            drawable2.draw(canvas);
         }
     }
 
@@ -524,60 +595,6 @@ public class ClockSkinView extends View {
         }
     }
 
-    private void drawArrayHour(Canvas canvas, ClockSkinItem item) {
-        List<Drawable> drawables = item.getDrawables();
-        int hour = calendar.get(Calendar.HOUR_OF_DAY);
-        if (!DateFormat.is24HourFormat(context)) {
-            hour = hour % 12;
-            if (hour == 0) {
-                hour = 12;
-            }
-        }
-        Drawable h10 = drawables.get(hour / 10);
-        Drawable h1 = drawables.get(hour % 10);
-
-        if (true) {
-            int width = h10.getIntrinsicWidth();
-            int height = h10.getIntrinsicHeight();
-            h10.setBounds((viewCenterX + item.getCenterX()) - width, (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()), viewCenterY + item.getCenterY() + (height / 2));
-            h10.draw(canvas);
-            h1.setBounds((viewCenterX + item.getCenterX()), (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()) + width, viewCenterY + item.getCenterY() + (height / 2));
-            h1.draw(canvas);
-        }
-    }
-
-    private void drawArrayMinute(Canvas canvas, ClockSkinItem item) {
-        List<Drawable> drawables = item.getDrawables();
-        int minute = calendar.get(Calendar.MINUTE);
-        Drawable m10 = drawables.get(minute / 10);
-        Drawable m1 = drawables.get(minute % 10);
-
-        if (true) {
-            int width = m10.getIntrinsicWidth();
-            int height = m10.getIntrinsicHeight();
-            m10.setBounds((viewCenterX + item.getCenterX()) - width, (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()), viewCenterY + item.getCenterY() + (height / 2));
-            m10.draw(canvas);
-            m1.setBounds((viewCenterX + item.getCenterX()), (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()) + width, viewCenterY + item.getCenterY() + (height / 2));
-            m1.draw(canvas);
-        }
-    }
-
-    private void drawArraySecond(Canvas canvas, ClockSkinItem item) {
-        List<Drawable> drawables = item.getDrawables();
-        int second = calendar.get(Calendar.SECOND);
-        Drawable s10 = drawables.get(second / 10);
-        Drawable s1 = drawables.get(second % 10);
-
-        if (true) {
-            int width = s10.getIntrinsicWidth();
-            int height = s10.getIntrinsicHeight();
-            s10.setBounds((viewCenterX + item.getCenterX()) - width, (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()), viewCenterY + item.getCenterY() + (height / 2));
-            s10.draw(canvas);
-            s1.setBounds((viewCenterX + item.getCenterX()), (viewCenterY + item.getCenterY()) - (height / 2), (viewCenterX + item.getCenterX()) + width, viewCenterY + item.getCenterY() + (height / 2));
-            s1.draw(canvas);
-        }
-    }
-
     private void drawArrayBattery(Canvas canvas, ClockSkinItem item) {
         List<Drawable> drawables = item.getDrawables();
         int battery = batteryPercentage;
@@ -632,224 +649,62 @@ public class ClockSkinView extends View {
         }
     }
 
+    private void drawArrayTemperature(Canvas canvas, ClockSkinItem item) {
+        List<Drawable> drawables = item.getDrawables();
+        int weatherTemp = SystemHelper.getWeatherTemp(context);
+        boolean negative = false;
+        if (weatherTemp < 0) {
+            weatherTemp = -weatherTemp;
+            negative = true;
+        }
+
+        Drawable sign = drawables.get(10);
+        Drawable t10 = drawables.get(weatherTemp / 10);
+        Drawable t1 = drawables.get(weatherTemp % 10);
+        Drawable unit = drawables.get(11);
+
+        if (true) {
+            int numberWidth = t10.getIntrinsicWidth();
+            int numberHeight = t10.getIntrinsicHeight();
+            if (negative) {
+                int signWidth = sign.getIntrinsicWidth();
+                int signHeight = sign.getIntrinsicHeight();
+                sign.setBounds((viewCenterX + item.getCenterX()) - (numberWidth * 2), (viewCenterY + item.getCenterY()) - (numberHeight / 2), (viewCenterX + item.getCenterX()) - numberWidth, viewCenterY + item.getCenterY() + (numberHeight / 2));
+                sign.draw(canvas);
+            }
+            t10.setBounds((viewCenterX + item.getCenterX()) - numberWidth, (viewCenterY + item.getCenterY()) - (numberHeight / 2), viewCenterX + item.getCenterX(), viewCenterY + item.getCenterY() + (numberHeight / 2));
+            t10.draw(canvas);
+            t1.setBounds((viewCenterX + item.getCenterX()), (viewCenterY + item.getCenterY()) - (numberHeight / 2), (viewCenterX + item.getCenterX()) + numberWidth, viewCenterY + item.getCenterY() + (numberHeight / 2));
+            t1.draw(canvas);
+            int unitWidth = unit.getIntrinsicWidth();
+            int unitHeight = unit.getIntrinsicHeight();
+            unit.setBounds((viewCenterX + item.getCenterX()) + numberWidth, (viewCenterY + item.getCenterY()) - (numberHeight / 2), (viewCenterX + item.getCenterX()) + (numberWidth * 2), viewCenterY + item.getCenterY() + (numberHeight / 2));
+            unit.draw(canvas);
+        }
+    }
+
     private void drawDial(Canvas canvas, ClockSkinItem item) {
         Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            if (true) {
-                int centerX = item.getCenterX();
-                int centerY = item.getCenterY();
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
+        if (true) {
+            int centerX = item.getCenterX();
+            int centerY = item.getCenterY();
+            int width = drawable.getIntrinsicWidth();
+            int height = drawable.getIntrinsicHeight();
+            drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
             drawable.draw(canvas);
         }
     }
 
-    private void drawHourHand(Canvas canvas, ClockSkinItem item, float hour) {
+    private void drawHand(Canvas canvas, ClockSkinItem item, float angle) {
         Drawable drawable = item.getDrawable();
         if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
+            int centerX = viewCenterX + item.getCenterX();
+            int centerY = viewCenterY + item.getCenterY();
+            int halfWidth = drawable.getIntrinsicWidth() / 2;
+            int halfHeight = drawable.getIntrinsicHeight() / 2;
+            drawable.setBounds(centerX - halfWidth, centerY - halfHeight, centerX + halfWidth, centerY + halfHeight);
             canvas.save();
-            canvas.rotate(angle + ((hour * (float) 360 * (float) mulRotate) / (float) 12), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawMinuteHand(Canvas canvas, ClockSkinItem item, float minute) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((minute * (float) 360 * (float) mulRotate) / (float) 60), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawSecondHand(Canvas canvas, ClockSkinItem item, float second) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((second * (float) 360 * (float) mulRotate) / (float) 60), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawMonthHand(Canvas canvas, ClockSkinItem item, int month) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((float) (month * 360 * mulRotate) / (float) 12), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawWeekHand(Canvas canvas, ClockSkinItem item, int week) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((float) (week * 360 * mulRotate) / (float) 7), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawBatteryHand(Canvas canvas, ClockSkinItem item, int battery) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((float) (battery * 360 * mulRotate) / (float) 100), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawHour24Hand(Canvas canvas, ClockSkinItem item, float hour24) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((hour24 * (float) 360 * (float) mulRotate) / (float) 24), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawHourHandShadow(Canvas canvas, ClockSkinItem item, float hour) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((hour * (float) 360 * (float) mulRotate) / (float) 12), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawMinuteHandShadow(Canvas canvas, ClockSkinItem item, float minute) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((minute * (float) 360 * (float) mulRotate) / (float) 60), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawSecondHandShadow(Canvas canvas, ClockSkinItem item, float second) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((second * (float) 360 * (float) mulRotate) / (float) 60), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
-            drawable.draw(canvas);
-            canvas.restore();
-        }
-    }
-
-    private void drawMonthDayHand(Canvas canvas, ClockSkinItem item, int monthDay) {
-        Drawable drawable = item.getDrawable();
-        if (drawable != null) {
-            int mulRotate = item.getMulRotate();
-            int centerX = item.getCenterX();
-            int centerY = item.getCenterY();
-            float angle = item.getAngle();
-            canvas.save();
-            canvas.rotate(angle + ((float) (monthDay * 360 * mulRotate) / (float) 31), (float) (viewCenterX + centerX), (float) (viewCenterY + centerY));
-            if (true) {
-                int width = drawable.getIntrinsicWidth();
-                int height = drawable.getIntrinsicHeight();
-                drawable.setBounds((viewCenterX + centerX) - (width / 2), (viewCenterY + centerY) - (height / 2), (viewCenterX + centerX) + (width / 2), (viewCenterY + centerY) + (height / 2));
-            }
+            canvas.rotate(angle, (float) centerX, (float) centerY);
             drawable.draw(canvas);
             canvas.restore();
         }
@@ -861,13 +716,25 @@ public class ClockSkinView extends View {
 
     }
 
-    private void parseClockSkin(ClockSkin clockSkin) {
+    private ClockSkin parseClockSkin(ClockSkin clockSkin) {
         try (InputStream is = clockSkin.getClockSkinFile(ClockSkinConstants.CLOCK_SKIN_XML)) {
             XmlPullParser parser = Xml.newPullParser();
             parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false);
             parser.setInput(is, null);
             parser.nextTag();
             parser.require(XmlPullParser.START_TAG, null, "clockskin");
+
+            String width = parser.getAttributeValue(null, "width");
+            String height = parser.getAttributeValue(null, "height");
+            if (width != null) {
+                Log.d(TAG, "parseClockSkin: width = " + width);
+                clockSkin.setWidth(Integer.valueOf(width));
+            }
+            if (height != null) {
+                Log.d(TAG, "parseClockSkin: height = " + height);
+                clockSkin.setHeight(Integer.valueOf(height));
+            }
+
             boolean invertDirection = false;
             while (parser.next() != XmlPullParser.END_DOCUMENT) {
                 if (parser.getEventType() != XmlPullParser.START_TAG) {
@@ -877,7 +744,7 @@ public class ClockSkinView extends View {
                 if (parser.getName().equals(ClockSkinConstants.TAG_DRAWABLE)) {
                     Log.d(TAG, "parseClockSkin: new drawable!");
                     ClockSkinItem clockSkinItem = parseDrawableTag(parser, clockSkin);
-                    if (clockSkinItem.getDirection() == ClockSkinConstants.DIRECTION_REVERT) {
+                    if (clockSkinItem.getDirection() == ClockSkinConstants.DIRECTION_REVERSE) {
                         if (invertDirection) {
                             clockSkinItem.setDirection(ClockSkinConstants.DIRECTION_NORMAL);
                             invertDirection = false;
@@ -885,20 +752,20 @@ public class ClockSkinView extends View {
                             invertDirection = true;
                         }
                     } else if (invertDirection) {
-                        clockSkinItem.setDirection(ClockSkinConstants.DIRECTION_REVERT);
+                        clockSkinItem.setDirection(ClockSkinConstants.DIRECTION_REVERSE);
                     }
                     clockSkinItem.setTimeZone(calendar.getTimeZone());
                     clockSkin.addClockSkinItem(clockSkinItem);
                     Log.d(TAG, "parseClockSkin: finished parsing drawable");
                 }
             }
-        } catch (XmlPullParserException e) {
+        } catch (XmlPullParserException | IOException e) {
             Log.e(TAG, "parseClockSkin: error while parsing the ClockSkin!", e);
-            e.printStackTrace();
-        } catch (IOException e) {
             e.printStackTrace();
         }
         Log.d(TAG, "parseClockSkin: finished parsing!");
+
+        return clockSkin;
     }
 
     private void parseDrawableArray(ClockSkin clockSkin, ClockSkinItem clockSkinItem, String name) {

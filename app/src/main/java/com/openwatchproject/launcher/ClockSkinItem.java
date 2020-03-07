@@ -50,6 +50,7 @@ public class ClockSkinItem {
         this.direction = 1;
         this.textSize = 18;
         this.rotateMode = 3;
+        this.range = 30;
     }
 
     public void setTimeZone(TimeZone timeZone) {

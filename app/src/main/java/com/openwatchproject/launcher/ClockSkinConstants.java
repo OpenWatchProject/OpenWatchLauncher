@@ -5,14 +5,14 @@ public class ClockSkinConstants {
     public static final String CLOCK_SKIN_PREVIEW = "clock_skin_model.png";
 
     public static final int DIRECTION_NORMAL = 1;
-    public static final int DIRECTION_REVERT = 2;
+    public static final int DIRECTION_REVERSE = 2;
 
     public static final int ROTATE_NONE = 0;
     public static final int ROTATE_HOUR = 1;
     public static final int ROTATE_MINUTE = 2;
     public static final int ROTATE_SECOND = 3;
     public static final int ROTATE_MONTH = 4;
-    public static final int ROTATE_WEEK = 5;
+    public static final int ROTATE_DAY_OF_WEEK = 5;
     public static final int ROTATE_BATTERY = 6;
     public static final int ROTATE_DAY_NIGHT = 7; 
     public static final int ROTATE_HOUR_SHADOW = 8;
