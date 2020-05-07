@@ -27,6 +27,7 @@ import androidx.wear.widget.WearableLinearLayoutManager;
 import androidx.wear.widget.WearableRecyclerView;
 
 import com.openwatchproject.launcher.adapter.LauncherAdapter;
+import com.openwatchproject.launcher.databinding.FragmentLauncherBinding;
 import com.openwatchproject.launcher.listener.LauncherItemClickListener;
 import com.openwatchproject.launcher.listener.LauncherItemLongClickListener;
 import com.openwatchproject.launcher.model.LauncherItem;
@@ -47,6 +48,8 @@ import static com.openwatchproject.launcher.Utils.isSystemApp;
 
 public class LauncherFragment extends Fragment {
     private static final String TAG = "LauncherFragment";
+
+    private FragmentLauncherBinding binding;
 
     private WearableRecyclerView wearableRecyclerView;
     private LauncherAdapter launcherAdapter;
@@ -130,15 +133,15 @@ public class LauncherFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_launcher, container, false);
+        binding = FragmentLauncherBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        wearableRecyclerView = view.findViewById(R.id.wearable_recycler_view);
+        wearableRecyclerView = binding.wearableRecyclerView;
         wearableRecyclerView.setEdgeItemsCenteringEnabled(true);
         wearableRecyclerView.setLayoutManager(new WearableLinearLayoutManager(getContext()));
         wearableRecyclerView.setAdapter(launcherAdapter);

@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 
 import com.openwatchproject.launcher.ClockSkin;
+import com.openwatchproject.launcher.databinding.ClockskinItemBinding;
 import com.openwatchproject.launcher.listener.ClockSkinInfoClickListener;
 import com.openwatchproject.launcher.R;
 
@@ -28,20 +29,20 @@ public class ClockSkinPagerAdapter extends PagerAdapter {
     @NonNull
     @Override
     public Object instantiateItem(@NonNull ViewGroup container, int position) {
-        View view = LayoutInflater.from(container.getContext())
-                .inflate(R.layout.clockskin_item, container, false);
+        ClockskinItemBinding binding = ClockskinItemBinding.inflate(LayoutInflater.from(container.getContext()), container, false);
 
         ClockSkin clockSkin = clockSkins.get(position);
 
-        TextView name = view.findViewById(R.id.name);
+        final TextView name = binding.name;
         name.setSelected(true);
-        ImageView preview = view.findViewById(R.id.preview);
-        ImageView removeButton = view.findViewById(R.id.remove_button);
+        final ImageView preview = binding.preview;
+        final ImageView removeButton = binding.removeButton;
 
         name.setText(clockSkin.getFile().getName());
         preview.setImageBitmap(clockSkin.getPreview());
-        view.setOnClickListener(v -> clickListener.onClick(clockSkin));
 
+        final View view = binding.getRoot();
+        view.setOnClickListener(v -> clickListener.onClick(clockSkin));
         container.addView(view);
         return view;
     }

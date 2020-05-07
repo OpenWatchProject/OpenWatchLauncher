@@ -8,36 +8,36 @@ import android.view.ViewParent;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
+import com.openwatchproject.launcher.activity.MainActivity;
 import com.openwatchproject.launcher.adapter.VerticalViewPagerAdapter;
 import com.openwatchproject.launcher.R;
+import com.openwatchproject.launcher.databinding.FragmentVerticalViewPagerBinding;
 import com.openwatchproject.launcher.view.HorizontalViewPager;
 import com.openwatchproject.launcher.view.VerticalViewPager;
 
 public class VerticalViewPagerFragment extends Fragment {
 
-    private VerticalViewPager verticalViewPager;
-    private VerticalViewPagerAdapter verticalViewPagerAdapter;
+    private FragmentVerticalViewPagerBinding binding;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_vertical_view_pager, container, false);
+        binding = FragmentVerticalViewPagerBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        verticalViewPager = view.findViewById(R.id.vertical_view_pager);
-        verticalViewPagerAdapter = new VerticalViewPagerAdapter(getActivity().getSupportFragmentManager());
+        final VerticalViewPager verticalViewPager = binding.verticalViewPager;
+        final VerticalViewPagerAdapter verticalViewPagerAdapter = new VerticalViewPagerAdapter(getActivity().getSupportFragmentManager());
         verticalViewPager.setAdapter(verticalViewPagerAdapter);
         verticalViewPager.setCurrentItem(1);
-        ViewParent parent = getView().getParent();
-        if (parent instanceof HorizontalViewPager) {
-            ((HorizontalViewPager) getView().getParent()).setVerticalViewPager(verticalViewPager);
-        }
+
+        ((HorizontalViewPager) getView().getParent()).setVerticalViewPager(verticalViewPager);
     }
 }

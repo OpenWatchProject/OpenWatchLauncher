@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.room.Room;
 import androidx.wear.widget.WearableRecyclerView;
 
+import com.openwatchproject.launcher.databinding.LauncherItemBinding;
 import com.openwatchproject.launcher.listener.LauncherItemClickListener;
 import com.openwatchproject.launcher.listener.LauncherItemLongClickListener;
 import com.openwatchproject.launcher.model.LauncherItem;
@@ -61,9 +62,8 @@ public class LauncherAdapter extends ListAdapter<LauncherItem, LauncherAdapter.V
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext())
-                .inflate(R.layout.launcher_item, parent, false);
-        return new ViewHolder(view, viewType == 0);
+        LauncherItemBinding binding = LauncherItemBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+        return new ViewHolder(binding, viewType == 0);
     }
 
     @Override
@@ -110,11 +110,11 @@ public class LauncherAdapter extends ListAdapter<LauncherItem, LauncherAdapter.V
 
         private LauncherItem launcherItem;
 
-        public ViewHolder(@NonNull View itemView, boolean isRecent) {
-            super(itemView);
-            icon = itemView.findViewById(R.id.icon);
-            title = itemView.findViewById(R.id.title);
-            if (isRecent) itemView.findViewById(R.id.recent).setVisibility(View.VISIBLE);
+        public ViewHolder(@NonNull LauncherItemBinding binding, boolean isRecent) {
+            super(binding.getRoot());
+            icon = binding.icon;
+            title = binding.title;
+            if (isRecent) binding.recent.setVisibility(View.VISIBLE);
             itemView.setOnClickListener(v -> clickListener.onClick(launcherItem));
             itemView.setOnLongClickListener(v -> {
                 longClickListener.onLongClick(launcherItem);

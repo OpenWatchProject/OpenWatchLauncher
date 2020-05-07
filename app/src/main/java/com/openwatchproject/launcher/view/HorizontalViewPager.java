@@ -28,7 +28,7 @@ public class HorizontalViewPager extends ViewPager {
 
     private void init() {
         verticalViewPager = null;
-        // Get rid of the overscroll drawing that happens on the left and right (the ripple)
+        // Get rid of the overscroll effect
         setOverScrollMode(View.OVER_SCROLL_NEVER);
         setOffscreenPageLimit(2);
     }
@@ -62,5 +62,9 @@ public class HorizontalViewPager extends ViewPager {
         if (verticalViewPager.getCurrentItem() != vertical) {
             verticalViewPager.setCurrentItem(vertical);
         }
+    }
+
+    public int getCurrentVerticalItem() {
+        return verticalViewPager.getCurrentItem();
     }
 }

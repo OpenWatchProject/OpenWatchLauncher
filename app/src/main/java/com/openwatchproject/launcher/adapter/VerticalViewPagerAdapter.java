@@ -15,20 +15,25 @@ public class VerticalViewPagerAdapter extends FragmentPagerAdapter {
     private SparseArray<Fragment> fragments;
 
     public VerticalViewPagerAdapter(FragmentManager fm) {
-        super(fm);
+        super(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT);
         fragments = new SparseArray<>();
     }
 
     @Override
     public Fragment getItem(int position) {
-        switch (position) {
-            case 0:
-                return new QuickSettingsFragment();
-            case 1:
-                return new ClockSkinFragment();
+        Fragment fragment = fragments.get(position);
+        if (fragment == null) {
+            switch (position) {
+                case 0:
+                    return new QuickSettingsFragment();
+                case 1:
+                    return new ClockSkinFragment();
+                default:
+                    throw new IllegalStateException();
+            }
         }
 
-        return null; // This is never reached
+        return fragment;
     }
 
     @NonNull

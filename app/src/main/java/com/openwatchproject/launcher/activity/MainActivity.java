@@ -10,17 +10,15 @@ import android.view.KeyEvent;
 
 import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.viewpager.widget.PagerAdapter;
 
 import com.openwatchproject.launcher.adapter.HorizontalViewPagerAdapter;
-import com.openwatchproject.launcher.R;
+import com.openwatchproject.launcher.databinding.ActivityMainBinding;
 import com.openwatchproject.launcher.view.HorizontalViewPager;
 
 public class MainActivity extends AppCompatActivity {
     private static final String TAG = "MainActivity";
 
     private HorizontalViewPager horizontalViewPager;
-    private PagerAdapter pagerAdapter;
 
     BroadcastReceiver receiver = new BroadcastReceiver() {
         @Override
@@ -31,14 +29,14 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        final ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        horizontalViewPager = findViewById(R.id.horizontal_view_pager);
-        pagerAdapter = new HorizontalViewPagerAdapter(getSupportFragmentManager());
+        horizontalViewPager = binding.horizontalViewPager;
+        final HorizontalViewPagerAdapter pagerAdapter = new HorizontalViewPagerAdapter(getSupportFragmentManager());
         horizontalViewPager.setAdapter(pagerAdapter);
         horizontalViewPager.setCurrentItem(1);
 

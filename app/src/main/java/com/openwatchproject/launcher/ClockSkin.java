@@ -33,12 +33,10 @@ public class ClockSkin {
 
         if (file.isFile()) {
             try (ZipFile clockSkinZip = new ZipFile(file)) {
-                ZipEntry previewEntry = clockSkinZip.getEntry(ClockSkinConstants.CLOCK_SKIN_PREVIEW);
+                final ZipEntry previewEntry = clockSkinZip.getEntry(ClockSkinConstants.CLOCK_SKIN_PREVIEW);
                 if (previewEntry != null) {
                     try (InputStream is = clockSkinZip.getInputStream(previewEntry)) {
                         this.preview = BitmapFactory.decodeStream(is);
-                    } catch (NullPointerException e) {
-                        Log.d(TAG, "ClockSkin: ");
                     }
                 }
             } catch (IOException e) {
@@ -68,19 +66,22 @@ public class ClockSkin {
     public InputStream getClockSkinFile(String name) {
         if (file.isFile()) {
             try (ZipFile clockSkinZip = new ZipFile(file)) {
-                return clockSkinZip.getInputStream(clockSkinZip.getEntry(name));
-            } catch (IOException | NullPointerException e) {
+                final ZipEntry zipEntry = clockSkinZip.getEntry(name);
+                if (zipEntry != null) {
+                    return clockSkinZip.getInputStream(zipEntry);
+                }
+            } catch (IOException e) {
                 Log.d(TAG, "getClockSkinFile: file not found: " + name);
-                return null;
             }
         } else {
             try {
                 return new FileInputStream(new File(file, name));
             } catch (FileNotFoundException e) {
                 Log.d(TAG, "getClockSkinFile: file not found: " + name);
-                return null;
             }
         }
+
+        return null;
     }
 
     public Drawable getDrawable(Context context, String name) {

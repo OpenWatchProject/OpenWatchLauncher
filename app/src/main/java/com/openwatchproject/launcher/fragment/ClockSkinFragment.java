@@ -51,7 +51,6 @@ public class ClockSkinFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
         return new ClockSkinView(container.getContext());
     }
 
@@ -154,13 +153,13 @@ public class ClockSkinFragment extends Fragment {
             }
         }
 
-        Toast.makeText(getContext(), "Storage permissions not granted, or no valid ClockSkin was found.", Toast.LENGTH_LONG).show();
+        Toast.makeText(getContext(), "No valid ClockSkin was found.", Toast.LENGTH_LONG).show();
     }
 
     private ClockInfo parseDrawable(Element drawable) {
         ClockInfo clockInfo = new ClockInfo();
 
-        Element element = (Element) drawable;
+        Element element = drawable;
         NodeList elementNodes = element.getChildNodes();
         for (int j = 0; j < elementNodes.getLength(); j++) {
             Node n = elementNodes.item(j);

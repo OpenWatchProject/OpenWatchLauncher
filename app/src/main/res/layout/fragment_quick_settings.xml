@@ -13,7 +13,7 @@
         android:layout_height="0dp"
         android:max="100"
         android:progress="100"
-        android:progressDrawable="@drawable/circle"
+        android:progressDrawable="@drawable/battery_circle"
         android:rotation="-90"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

@@ -1,9 +1,11 @@
 package com.openwatchproject.launcher.fragment;
 
+import android.animation.ArgbEvaluator;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.os.BatteryManager;
 import android.os.Bundle;
@@ -24,6 +26,8 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.openwatchproject.launcher.R;
+import com.openwatchproject.launcher.databinding.FragmentQuickSettingsBinding;
+import com.openwatchproject.launcher.databinding.FragmentVerticalViewPagerBinding;
 
 import static android.telephony.PhoneStateListener.LISTEN_DATA_CONNECTION_STATE;
 import static android.telephony.PhoneStateListener.LISTEN_NONE;
@@ -37,6 +41,7 @@ import static android.telephony.TelephonyManager.DATA_SUSPENDED;
 public class QuickSettingsFragment extends Fragment {
     private static final String TAG = "QuickSettingsFragment";
 
+    private FragmentQuickSettingsBinding binding;
     private ProgressBar batteryProgress;
 
     private TextView batteryStatus;
@@ -49,24 +54,25 @@ public class QuickSettingsFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
+        binding = FragmentQuickSettingsBinding.inflate(inflater, container, false);
         // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_quick_settings, container, false);
+        return binding.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        batteryStatus = view.findViewById(R.id.battery_status);
-        batteryProgress = view.findViewById(R.id.progressBar);
+        batteryStatus = binding.batteryStatus;
+        batteryProgress = binding.progressBar;
 
         int minDisplaySize = getMinDisplaySize();
         batteryProgress.getLayoutParams().height = minDisplaySize;
         batteryProgress.getLayoutParams().width = minDisplaySize;
 
-        carrierName = view.findViewById(R.id.carrier_name);
-        signalStrength = view.findViewById(R.id.signal_strength);
-        connectionState = view.findViewById(R.id.connection_state);
+        carrierName = binding.carrierName;
+        signalStrength = binding.signalStrength;
+        connectionState = binding.connectionState;
 
         telephonyManager = (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
 

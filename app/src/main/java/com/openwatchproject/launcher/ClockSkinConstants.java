@@ -18,9 +18,9 @@ public class ClockSkinConstants {
     public static final int ROTATE_HOUR_SHADOW = 8;
     public static final int ROTATE_MINUTE_SHADOW = 9;
     public static final int ROTATE_SECOND_SHADOW = 10;
-    public static final int ROTATE_BATTERY_CIRCLE = 11; 
-    public static final int ROTATE_DAY = 20; 
-    public static final int ROTATE_STEPS_TARGET = 101; 
+    public static final int ROTATE_BATTERY_CIRCLE = 11; // Not available in WFD
+    public static final int ROTATE_DAY = 20;
+    public static final int ROTATE_STEPS_TARGET = 101; // Not available in WFD
 
     public static final int ARRAY_NONE = 0;
     public static final int ARRAY_YEAR_MONTH_DAY = 1;
