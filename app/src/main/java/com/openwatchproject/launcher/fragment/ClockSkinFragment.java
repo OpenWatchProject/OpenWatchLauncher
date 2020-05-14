@@ -4,8 +4,6 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.os.Environment;
@@ -22,45 +20,41 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import com.openwatchproject.launcher.ClockSkin;
-import com.openwatchproject.launcher.ClockSkinConstants;
 import com.openwatchproject.launcher.R;
 import com.openwatchproject.launcher.activity.ClockSkinChooserActivity;
-import com.openwatchproject.launcher.model.ClockInfo;
 import com.openwatchproject.launcher.model.WearWatchFace;
-import com.openwatchproject.launcher.view.ClockSkinView;
-
-import org.w3c.dom.Element;
-import org.w3c.dom.Node;
-import org.w3c.dom.NodeList;
+import com.openwatchproject.watchface.OpenWatchWatchFace;
+import com.openwatchproject.watchface.OpenWatchWatchFaceFile;
+import com.openwatchproject.watchface.OpenWatchWatchFaceView;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Enumeration;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
 
 public class ClockSkinFragment extends Fragment {
     private static final String TAG = "ClockSkinFragment";
     private static final int REQUEST_CODE_CHOOSE_CLOCK_SKIN = 1;
 
-    private ClockSkinView clockSkinView;
+    private OpenWatchWatchFaceView clockSkinView;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        return new ClockSkinView(container.getContext());
+        return new OpenWatchWatchFaceView(container.getContext());
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        this.clockSkinView = (ClockSkinView) view;
+        this.clockSkinView = (OpenWatchWatchFaceView) view;
+        this.clockSkinView.setOnClickListener(this.clockSkinView.onClickListener); // TODO: FIX THIS! DOESN'T WORK IF ATTACHED FROM INSIDE.
         this.clockSkinView.setOnLongClickListener(view1 -> {
             Intent clockSkinChooserIntent = new Intent(getContext(), ClockSkinChooserActivity.class);
+            final OpenWatchWatchFace currentWatchFace = clockSkinView.getWatchFace();
+            if (currentWatchFace != null) {
+                //clockSkinChooserIntent.putExtra(ClockSkinChooserActivity.EXTRA_CURRENT_CLOCKSKIN, currentWatchFace.getName());
+            }
             startActivityForResult(clockSkinChooserIntent, REQUEST_CODE_CHOOSE_CLOCK_SKIN);
             return true;
         });
@@ -72,11 +66,12 @@ public class ClockSkinFragment extends Fragment {
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (requestCode == REQUEST_CODE_CHOOSE_CLOCK_SKIN) {
             if (resultCode == Activity.RESULT_OK) {
-                String clockskinPath = data.getStringExtra(ClockSkinChooserActivity.RESULT_CLOCKSKIN_PATH);
-                Log.d(TAG, "Selected clockskin: " + clockskinPath);
+                String watchFacePath = data.getStringExtra(ClockSkinChooserActivity.RESULT_WATCH_FACE_PATH);
+                Log.d(TAG, "Selected clockskin: " + watchFacePath);
 
-                ClockSkin clockSkin = new ClockSkin(new File(clockskinPath));
-                clockSkinView.setClockSkin(clockSkin);
+                OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(watchFacePath);
+                clockSkinView.setWatchFace(watchFaceFile.getWatchFace());
+                watchFaceFile.close();
             } else {
                 Log.d(TAG, "No clockskin selected");
             }
@@ -120,55 +115,17 @@ public class ClockSkinFragment extends Fragment {
         return wearWatchFaces;
     }
 
-    private Bitmap getClockskinPreview(File clockskinFile) {
-        Bitmap preview = null;
-
-        if (clockskinFile.isDirectory()) {
-            preview = BitmapFactory.decodeFile(new File(clockskinFile, ClockSkinConstants.CLOCK_SKIN_PREVIEW).getAbsolutePath());
-        } else {
-            try (ZipFile clockskinZip = new ZipFile(clockskinFile)) {
-                Enumeration<? extends ZipEntry> clockskinEntries = clockskinZip.entries();
-                while (clockskinEntries.hasMoreElements()) {
-                    ZipEntry clockskinEntry = clockskinEntries.nextElement();
-                    if (clockskinEntry.getName().equals(ClockSkinConstants.CLOCK_SKIN_PREVIEW)) {
-                        preview = BitmapFactory.decodeStream(clockskinZip.getInputStream(clockskinEntry));
-                    }
-                }
-            } catch (IOException e) {
-                Log.e(TAG, "getClockskinPreview: Unable to decode preview", e);
-            }
-        }
-
-        return preview;
-    }
-
     public void loadWatchFace() {
         File clockskinFolder = new File(Environment.getExternalStorageDirectory(), "clockskin/");
         if (clockskinFolder.exists()) {
             File[] fs = clockskinFolder.listFiles();
-            if (fs.length > 0) {
-                ClockSkin clockSkin = new ClockSkin(fs[0]);
-                clockSkinView.setClockSkin(clockSkin);
+            if (fs != null && fs.length > 0) {
+                OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(fs[0]);
+                clockSkinView.setWatchFace(watchFaceFile.getWatchFace());
                 return;
             }
         }
 
         Toast.makeText(getContext(), "No valid ClockSkin was found.", Toast.LENGTH_LONG).show();
     }
-
-    private ClockInfo parseDrawable(Element drawable) {
-        ClockInfo clockInfo = new ClockInfo();
-
-        Element element = drawable;
-        NodeList elementNodes = element.getChildNodes();
-        for (int j = 0; j < elementNodes.getLength(); j++) {
-            Node n = elementNodes.item(j);
-            if (n.getNodeType() == Node.ELEMENT_NODE) {
-                Log.d(TAG, "\t" + n.getNodeName() + ": " + n.getTextContent());
-            }
-        }
-
-        return clockInfo;
-    }
-
 }

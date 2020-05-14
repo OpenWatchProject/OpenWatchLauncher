@@ -15,7 +15,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.openwatchproject.launcher.view.ClockSkinView
+    <com.openwatchproject.watchface.OpenWatchWatchFaceView
         android:id="@+id/csv"
         android:layout_width="0dp"
         android:layout_height="0dp"

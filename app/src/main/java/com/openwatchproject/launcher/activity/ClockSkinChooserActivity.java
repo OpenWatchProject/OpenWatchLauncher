@@ -7,17 +7,19 @@ import android.os.Environment;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.viewpager.widget.ViewPager;
 
-import com.openwatchproject.launcher.ClockSkin;
-import com.openwatchproject.launcher.R;
 import com.openwatchproject.launcher.adapter.ClockSkinPagerAdapter;
 import com.openwatchproject.launcher.databinding.ActivityClockSkinChooserBinding;
+import com.openwatchproject.watchface.OpenWatchWatchFace;
+import com.openwatchproject.watchface.OpenWatchWatchFaceConstants;
+import com.openwatchproject.watchface.OpenWatchWatchFaceFile;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class ClockSkinChooserActivity extends AppCompatActivity {
-    public static final String RESULT_CLOCKSKIN_PATH = "CLOCK_SKIN_PATH";
+    public static final String EXTRA_CURRENT_CLOCKSKIN = "CURRENT_CLOCKSKIN";
+    public static final String RESULT_WATCH_FACE_PATH = "CLOCK_SKIN_PATH";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -28,25 +30,29 @@ public class ClockSkinChooserActivity extends AppCompatActivity {
         final ViewPager clockskinViewPager = binding.clockskinViewpager;
         final ClockSkinPagerAdapter clockSkinChooserAdapter = new ClockSkinPagerAdapter(getClockSkinsInfo(), item -> {
             Intent i = new Intent();
-            i.putExtra(RESULT_CLOCKSKIN_PATH, item.getFile().getAbsolutePath());
+            i.putExtra(RESULT_WATCH_FACE_PATH, item.getFile().getAbsolutePath());
             setResult(RESULT_OK, i);
             finish();
         });
         clockskinViewPager.setAdapter(clockSkinChooserAdapter);
+        clockskinViewPager.setCurrentItem(clockSkinChooserAdapter.getItemPosition(getIntent().getStringExtra(EXTRA_CURRENT_CLOCKSKIN)));
     }
 
-    private List<ClockSkin> getClockSkinsInfo() {
-        List<ClockSkin> clockSkins = new ArrayList<>();
+    private List<OpenWatchWatchFaceFile> getClockSkinsInfo() {
+        List<OpenWatchWatchFaceFile> clockSkins = new ArrayList<>();
 
         File clockSkinFolder = new File(Environment.getExternalStorageDirectory(), "clockskin/");
         File[] files = clockSkinFolder.listFiles();
 
         if (files != null) {
             for (File f : files) {
-                ClockSkin clockSkin = new ClockSkin(f);
+                if (!f.getName().endsWith(OpenWatchWatchFaceConstants.WATCH_FACE_FILE_EXTENSION)) continue;
+
+                OpenWatchWatchFaceFile clockSkin = new OpenWatchWatchFaceFile(f);
                 if (clockSkin.isValid()) {
                     clockSkins.add(clockSkin);
                 }
+                clockSkin.close();
             }
         }
 

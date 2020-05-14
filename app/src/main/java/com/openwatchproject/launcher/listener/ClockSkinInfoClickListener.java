@@ -1,7 +1,7 @@
 package com.openwatchproject.launcher.listener;
 
-import com.openwatchproject.launcher.ClockSkin;
+import com.openwatchproject.watchface.OpenWatchWatchFaceFile;
 
 public interface ClockSkinInfoClickListener {
-    void onClick(ClockSkin item);
+    void onClick(OpenWatchWatchFaceFile item);
 }

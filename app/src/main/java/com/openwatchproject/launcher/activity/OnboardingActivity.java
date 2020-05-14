@@ -1,5 +1,6 @@
 package com.openwatchproject.launcher.activity;
 
+import android.Manifest;
 import android.animation.ArgbEvaluator;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -116,6 +117,7 @@ public class OnboardingActivity extends AppCompatActivity {
          */
         private static final String ARG_SECTION_LABEL = "SECTION_LABEL";
         private static final String ARG_SECTION_DESCRIPTION = "SECTION_DESCRIPTION";
+        private static final String ARG_SECTION_PERMISSION = "SECTION_PERMISSION";
         private static final String ARG_SECTION_IMG = "SECTION_IMG";
 
         private FragmentPagerBinding binding;
@@ -136,6 +138,7 @@ public class OnboardingActivity extends AppCompatActivity {
                 case 1:
                     args.putString(ARG_SECTION_LABEL, "External Storage Permission");
                     args.putString(ARG_SECTION_DESCRIPTION, "This permission is needed to access the \"clockskin\" folder, where all your ClockSkins are saved.");
+                    args.putString(ARG_SECTION_PERMISSION, Manifest.permission.READ_EXTERNAL_STORAGE);
                     args.putInt(ARG_SECTION_IMG, R.drawable.ic_folder_24dp);
                     break;
                 case 2:
