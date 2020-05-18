@@ -47,13 +47,13 @@ public class ClockSkinFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        this.clockSkinView = (OpenWatchWatchFaceView) view;
-        this.clockSkinView.setOnClickListener(this.clockSkinView.onClickListener); // TODO: FIX THIS! DOESN'T WORK IF ATTACHED FROM INSIDE.
-        this.clockSkinView.setOnLongClickListener(view1 -> {
+        clockSkinView = (OpenWatchWatchFaceView) view;
+        clockSkinView.setOnClickListener(clockSkinView.onClickListener); // TODO: FIX THIS! DOESN'T WORK IF ATTACHED FROM INSIDE.
+        clockSkinView.setOnLongClickListener(view1 -> {
             Intent clockSkinChooserIntent = new Intent(getContext(), ClockSkinChooserActivity.class);
             final OpenWatchWatchFace currentWatchFace = clockSkinView.getWatchFace();
             if (currentWatchFace != null) {
-                //clockSkinChooserIntent.putExtra(ClockSkinChooserActivity.EXTRA_CURRENT_CLOCKSKIN, currentWatchFace.getName());
+                clockSkinChooserIntent.putExtra(ClockSkinChooserActivity.EXTRA_CURRENT_CLOCKSKIN, currentWatchFace.getAbsolutePath());
             }
             startActivityForResult(clockSkinChooserIntent, REQUEST_CODE_CHOOSE_CLOCK_SKIN);
             return true;
@@ -70,7 +70,7 @@ public class ClockSkinFragment extends Fragment {
                 Log.d(TAG, "Selected clockskin: " + watchFacePath);
 
                 OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(watchFacePath);
-                clockSkinView.setWatchFace(watchFaceFile.getWatchFace());
+                clockSkinView.setWatchFace(watchFaceFile.getWatchFace(getResources()));
                 watchFaceFile.close();
             } else {
                 Log.d(TAG, "No clockskin selected");
@@ -121,7 +121,7 @@ public class ClockSkinFragment extends Fragment {
             File[] fs = clockskinFolder.listFiles();
             if (fs != null && fs.length > 0) {
                 OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(fs[0]);
-                clockSkinView.setWatchFace(watchFaceFile.getWatchFace());
+                clockSkinView.setWatchFace(watchFaceFile.getWatchFace(getResources()));
                 return;
             }
         }
