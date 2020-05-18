@@ -1,7 +1,9 @@
 package com.openwatchproject.launcher.fragment;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Point;
@@ -69,33 +71,16 @@ public class ClockSkinFragment extends Fragment {
                 String watchFacePath = data.getStringExtra(ClockSkinChooserActivity.RESULT_WATCH_FACE_PATH);
                 Log.d(TAG, "Selected clockskin: " + watchFacePath);
 
+                SharedPreferences.Editor sharedPrefsEditor = getContext().getSharedPreferences(ClockSkinFragment.class.getName(), Context.MODE_PRIVATE).edit();
+                sharedPrefsEditor.putString("lastWatchFace", watchFacePath);
+                sharedPrefsEditor.apply();
+
                 OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(watchFacePath);
                 clockSkinView.setWatchFace(watchFaceFile.getWatchFace(getResources()));
                 watchFaceFile.close();
             } else {
                 Log.d(TAG, "No clockskin selected");
             }
-        }
-    }
-
-    private Point getDisplaySize() {
-        Display display = getActivity().getWindowManager().getDefaultDisplay();
-        Point size = new Point();
-        display.getRealSize(size);
-        return size;
-    }
-
-    private int getMinDisplaySize() {
-        Point size = getDisplaySize();
-        return Math.min(size.x, size.y);
-    }
-
-    @DrawableRes
-    public int getDrawableRes(String name) {
-        try {
-            return R.drawable.class.getField(name).getInt(null);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            return getResources().getIdentifier(name, "drawable", getContext().getPackageName());
         }
     }
 
@@ -116,12 +101,25 @@ public class ClockSkinFragment extends Fragment {
     }
 
     public void loadWatchFace() {
+        SharedPreferences sharedPrefs = getContext().getSharedPreferences(ClockSkinFragment.class.getName(), Context.MODE_PRIVATE);
+        String lastWatchFace = sharedPrefs.getString("lastWatchFace", null);
+        if (lastWatchFace != null) {
+            File f = new File(lastWatchFace);
+            if (f.exists()) {
+                OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(new File(lastWatchFace));
+                clockSkinView.setWatchFace(watchFaceFile.getWatchFace(getResources()));
+                watchFaceFile.close();
+                return;
+            }
+        }
+
         File clockskinFolder = new File(Environment.getExternalStorageDirectory(), "clockskin/");
         if (clockskinFolder.exists()) {
             File[] fs = clockskinFolder.listFiles();
             if (fs != null && fs.length > 0) {
                 OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(fs[0]);
                 clockSkinView.setWatchFace(watchFaceFile.getWatchFace(getResources()));
+                watchFaceFile.close();
                 return;
             }
         }
