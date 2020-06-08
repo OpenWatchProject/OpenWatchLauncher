@@ -1,6 +1,7 @@
 package com.openwatchproject.launcher.fragment;
 
 import android.app.Activity;
+import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;

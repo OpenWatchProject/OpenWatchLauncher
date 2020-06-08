@@ -1,8 +1,11 @@
 package com.openwatchproject.launcher.adapter;
 
+import android.content.res.Resources;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.TextView;
 
@@ -10,10 +13,9 @@ import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 
 import com.openwatchproject.launcher.Utils;
-import com.openwatchproject.launcher.activity.FullscreenDialog;
+import com.openwatchproject.launcher.activity.FullscreenDialogActivity;
 import com.openwatchproject.launcher.databinding.ClockskinItemBinding;
 import com.openwatchproject.launcher.listener.ClockSkinInfoClickListener;
-import com.openwatchproject.watchface.OpenWatchWatchFace;
 import com.openwatchproject.watchface.OpenWatchWatchFaceFile;
 
 import java.util.List;
@@ -37,15 +39,23 @@ public class ClockSkinPagerAdapter extends PagerAdapter {
 
         final TextView name = binding.name;
         name.setSelected(true);
+        Utils.fixRoundScreenWidth(name);
+        final TextView metadata = binding.metadata;
+        Utils.fixRoundScreenWidth(metadata);
         final ImageView preview = binding.preview;
         final ImageView removeButton = binding.removeButton;
 
         name.setText(watchFace.getMetadata().getName());
+        if (watchFace.getMetadata().getAuthor().isEmpty()) {
+            metadata.setText("v" + watchFace.getMetadata().getVersion());
+        } else {
+            metadata.setText("v" + watchFace.getMetadata().getVersion() + " - " + watchFace.getMetadata().getAuthor());
+        }
         preview.setImageBitmap(watchFace.getPreview());
         removeButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                new FullscreenDialog(container.getContext())
+                new FullscreenDialogActivity(container.getContext())
                         .setTitle("Delete ClockSkin?")
                         .setDescription("Do you really want to delete " + watchFace.getMetadata().getName() + "?")
                         .setPositiveButtonOnClickListener(new View.OnClickListener() {

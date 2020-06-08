@@ -11,7 +11,7 @@ import androidx.appcompat.app.AppCompatDialog;
 
 import com.openwatchproject.launcher.databinding.DialogFullscreenBinding;
 
-public class FullscreenDialog extends AppCompatDialog {
+public class FullscreenDialogActivity extends AppCompatDialog {
 
     private String title;
     private String description;
@@ -23,7 +23,7 @@ public class FullscreenDialog extends AppCompatDialog {
     private ImageButton positiveButtonView;
     private ImageButton negativeButtonView;
 
-    public FullscreenDialog(Context context) {
+    public FullscreenDialogActivity(Context context) {
         super(context);
     }
 
@@ -44,22 +44,22 @@ public class FullscreenDialog extends AppCompatDialog {
         if (negativeClickListener != null) negativeButtonView.setOnClickListener(negativeClickListener);
     }
 
-    public FullscreenDialog setTitle(String title) {
+    public FullscreenDialogActivity setTitle(String title) {
         this.title = title;
         return this;
     }
 
-    public FullscreenDialog setDescription(String description) {
+    public FullscreenDialogActivity setDescription(String description) {
         this.description = description;
         return this;
     }
 
-    public FullscreenDialog setPositiveButtonOnClickListener(View.OnClickListener l) {
+    public FullscreenDialogActivity setPositiveButtonOnClickListener(View.OnClickListener l) {
         this.positiveClickListener = l;
         return this;
     }
 
-    public FullscreenDialog setNegativeButtonOnClickListener(View.OnClickListener l) {
+    public FullscreenDialogActivity setNegativeButtonOnClickListener(View.OnClickListener l) {
         this.negativeClickListener = l;
         return this;
     }

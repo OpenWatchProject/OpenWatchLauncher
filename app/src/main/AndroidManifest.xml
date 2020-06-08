@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
+        android:name=".OpenWatchLauncher"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -13,7 +14,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".activity.FullscreenDialogActivity"></activity>
+        <activity android:name=".activity.FullscreenDialogActivity" />
         <activity android:name=".activity.OnboardingActivity" />
         <activity android:name=".activity.ClockSkinChooserActivity" />
         <activity android:name=".activity.MainActivity">
@@ -27,7 +28,7 @@
         </activity>
 
         <service
-            android:name=".NLService"
+            android:name=".notification.NLService"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />

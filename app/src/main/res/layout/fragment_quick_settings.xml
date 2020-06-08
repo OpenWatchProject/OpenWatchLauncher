@@ -36,11 +36,6 @@
             android:layout_height="wrap_content" />
 
         <TextView
-            android:id="@+id/battery_status"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <TextView
             android:id="@+id/signal_strength"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
@@ -49,6 +44,17 @@
             android:id="@+id/connection_state"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/network_type"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
+        <TextView
+            android:id="@+id/battery_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+
     </LinearLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

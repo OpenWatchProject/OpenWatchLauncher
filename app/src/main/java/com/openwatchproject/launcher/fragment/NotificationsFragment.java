@@ -1,62 +1,114 @@
 package com.openwatchproject.launcher.fragment;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Bundle;
+import android.service.notification.NotificationListenerService;
+import android.service.notification.StatusBarNotification;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import com.openwatchproject.launcher.NLService;
-import com.openwatchproject.launcher.R;
+import com.openwatchproject.launcher.notification.NotificationHelper;
+import com.openwatchproject.launcher.OpenWatchLauncher;
+import com.openwatchproject.launcher.notification.NotificationViewPagerAdapter;
+import com.openwatchproject.launcher.databinding.FragmentNotificationsBinding;
+import com.openwatchproject.launcher.view.VerticalViewPager;
 
 public class NotificationsFragment extends Fragment {
+    private static final String TAG = "NotificationsFragment";
+    private FragmentNotificationsBinding binding;
+
+    private NotificationHelper notificationHelper;
+
+    private TextView noNotificationsText;
+    private VerticalViewPager notificationsViewPager;
+    private NotificationViewPagerAdapter notificationsAdapter;
+
+    private NotificationCallback callback = new NotificationCallback() {
+        @Override
+        public void removeNotification(StatusBarNotification sbn) {
+            Log.d(TAG, "removeNotification");
+        }
+    };
+
+    private NotificationHelper.NotificationListener listener = new NotificationHelper.NotificationListener() {
+        @Override
+        public void onNotificationPosted(StatusBarNotification sbn) {
+            Log.d(TAG, "onNotificationPosted");
+
+            notificationsAdapter.addNotification(sbn);
+            setNotificationVisibility(notificationsAdapter.getCount() != 0);
+        }
+
+        @Override
+        public void onNotificationRemoved(StatusBarNotification sbn) {
+            Log.d(TAG, "onNotificationRemoved");
+
+            notificationsAdapter.removeNotification(sbn);
+            setNotificationVisibility(notificationsAdapter.getCount() != 0);
+        }
+
+        @Override
+        public void onNotificationRankingUpdated(NotificationListenerService.RankingMap rankingMap) {
+            Log.d(TAG, "onNotificationRankingUpdated");
+        }
+    };
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+    }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        return inflater.inflate(R.layout.fragment_notifications, container, false);
+        binding = FragmentNotificationsBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        IntentFilter notificationFilter = new IntentFilter();
-        notificationFilter.addAction(NLService.ACTION_NOTIFICATION_POSTED);
-        notificationFilter.addAction(NLService.ACTION_NOTIFICATION_REMOVED);
-        notificationFilter.addAction(NLService.ACTION_NOTIFICATION_RANKING_UPDATE);
-        LocalBroadcastManager.getInstance(getContext()).registerReceiver(notificationReceiver, notificationFilter);
+        noNotificationsText = binding.noNotificationsText;
+        notificationsViewPager = binding.notificationsViewPager;
+
+        notificationsAdapter = new NotificationViewPagerAdapter(callback);
+        notificationsViewPager.setAdapter(notificationsAdapter);
+    }
+
+    private void setNotificationVisibility(boolean visible) {
+        if (visible) {
+            notificationsViewPager.setVisibility(View.VISIBLE);
+            noNotificationsText.setVisibility(View.GONE);
+        } else {
+            notificationsViewPager.setVisibility(View.GONE);
+            noNotificationsText.setVisibility(View.VISIBLE);
+        }
     }
 
     @Override
-    public void onDestroy() {
-        LocalBroadcastManager.getInstance(getContext()).unregisterReceiver(notificationReceiver);
-        super.onDestroy();
+    public void onDestroyView() {
+        super.onDestroyView();
+        notificationHelper.removeNotificationListener(listener);
     }
 
-    BroadcastReceiver notificationReceiver = new BroadcastReceiver() {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            switch (intent.getAction()) {
-                case NLService.ACTION_NOTIFICATION_POSTED:
+    @Override
+    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
+        super.onActivityCreated(savedInstanceState);
 
-                    break;
-                case NLService.ACTION_NOTIFICATION_REMOVED:
+        notificationHelper = ((OpenWatchLauncher) getActivity().getApplication()).getNotificationHelper();
+        notificationsAdapter.setNotifications(notificationHelper.getPostedNotifications());
+        notificationHelper.addNotificationListener(listener);
+        setNotificationVisibility(notificationsAdapter.getCount() != 0);
+    }
 
-                    break;
-                case NLService.ACTION_NOTIFICATION_RANKING_UPDATE:
-
-                    break;
-            }
-        }
-    };
+    public interface NotificationCallback {
+        void removeNotification(StatusBarNotification sbn);
+    }
 }

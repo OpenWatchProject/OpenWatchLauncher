@@ -26,6 +26,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import com.openwatchproject.launcher.R;
+import com.openwatchproject.launcher.Utils;
 import com.openwatchproject.launcher.databinding.FragmentQuickSettingsBinding;
 import com.openwatchproject.launcher.databinding.FragmentVerticalViewPagerBinding;
 
@@ -37,6 +38,8 @@ import static android.telephony.TelephonyManager.DATA_CONNECTED;
 import static android.telephony.TelephonyManager.DATA_CONNECTING;
 import static android.telephony.TelephonyManager.DATA_DISCONNECTED;
 import static android.telephony.TelephonyManager.DATA_SUSPENDED;
+import static android.telephony.TelephonyManager.DATA_UNKNOWN;
+import static com.openwatchproject.launcher.Utils.NetworkGeneration.GENERATION_2;
 
 public class QuickSettingsFragment extends Fragment {
     private static final String TAG = "QuickSettingsFragment";
@@ -44,10 +47,11 @@ public class QuickSettingsFragment extends Fragment {
     private FragmentQuickSettingsBinding binding;
     private ProgressBar batteryProgress;
 
-    private TextView batteryStatus;
     private TextView carrierName;
     private TextView signalStrength;
     private TextView connectionState;
+    private TextView networkType;
+    private TextView batteryStatus;
 
     private TelephonyManager telephonyManager;
 
@@ -55,7 +59,6 @@ public class QuickSettingsFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         binding = FragmentQuickSettingsBinding.inflate(inflater, container, false);
-        // Inflate the layout for this fragment
         return binding.getRoot();
     }
 
@@ -73,6 +76,7 @@ public class QuickSettingsFragment extends Fragment {
         carrierName = binding.carrierName;
         signalStrength = binding.signalStrength;
         connectionState = binding.connectionState;
+        networkType = binding.networkType;
 
         telephonyManager = (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
 
@@ -81,7 +85,7 @@ public class QuickSettingsFragment extends Fragment {
         updateBatteryLevel(intent);
 
         telephonyManager.listen(phoneStateListener,
-                LISTEN_DATA_CONNECTION_STATE | LISTEN_SERVICE_STATE | LISTEN_SIGNAL_STRENGTHS);
+                LISTEN_SERVICE_STATE | LISTEN_DATA_CONNECTION_STATE | LISTEN_SIGNAL_STRENGTHS);
 
         updateTelephonyInfo();
     }
@@ -94,7 +98,17 @@ public class QuickSettingsFragment extends Fragment {
     }
 
     private void updateTelephonyInfo() {
-        carrierName.setText(telephonyManager.getSimOperatorName());
+        String operatorName = telephonyManager.getNetworkOperatorName();
+        if (operatorName == null || operatorName.isEmpty()) {
+            operatorName = telephonyManager.getSimOperatorName();
+            if (operatorName == null || operatorName.isEmpty()) {
+                carrierName.setVisibility(View.GONE);
+                return;
+            }
+        }
+
+        carrierName.setText(operatorName);
+        carrierName.setVisibility(View.VISIBLE);
     }
 
     private void updateBatteryLevel(Intent intent) {
@@ -124,20 +138,24 @@ public class QuickSettingsFragment extends Fragment {
         @Override
         public void onSignalStrengthsChanged(SignalStrength signalStrength) {
             super.onSignalStrengthsChanged(signalStrength);
-            QuickSettingsFragment.this.signalStrength.setText("Strength: " + signalStrength.getLevel());
+            int signalStrengthLevel = signalStrength.getLevel();
+            QuickSettingsFragment.this.signalStrength.setText("Strength: " + signalStrengthLevel);
         }
 
         @Override
         public void onServiceStateChanged(ServiceState serviceState) {
             super.onServiceStateChanged(serviceState);
+            int serviceStateState = serviceState.getState();
             Log.d(TAG, "onServiceStateChanged: " + serviceState.toString());
-
         }
 
         @Override
         public void onDataConnectionStateChanged(int state, int networkType) {
             super.onDataConnectionStateChanged(state, networkType);
             switch (state) {
+                case DATA_UNKNOWN:
+                    connectionState.setText("DATA_UNKNOWN");
+                    break;
                 case DATA_DISCONNECTED:
                     connectionState.setText("DATA_DISCONNECTED");
                     break;
@@ -149,6 +167,24 @@ public class QuickSettingsFragment extends Fragment {
                     break;
                 case DATA_SUSPENDED:
                     connectionState.setText("DATA_SUSPENDED");
+                    break;
+            }
+
+            switch (Utils.getNetworkType(networkType)) {
+                case GENERATION_2:
+                    QuickSettingsFragment.this.networkType.setText("Network type: 2G");
+                    break;
+                case GENERATION_3:
+                    QuickSettingsFragment.this.networkType.setText("Network type: 3G");
+                    break;
+                case GENERATION_4:
+                    QuickSettingsFragment.this.networkType.setText("Network type: 4G");
+                    break;
+                case GENERATION_5:
+                    QuickSettingsFragment.this.networkType.setText("Network type: 5G");
+                    break;
+                case GENERATION_UNKNOWN:
+                    QuickSettingsFragment.this.networkType.setText("Network type: Unknown (" + networkType + ")");
                     break;
             }
         }
