@@ -2,10 +2,17 @@ package com.openwatchproject.launcher.notification;
 
 import android.app.Notification;
 import android.content.Context;
+import android.content.res.ColorStateList;
+import android.content.res.Configuration;
+import android.content.res.Resources;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
+import android.graphics.drawable.RippleDrawable;
+import android.media.session.MediaSession;
 import android.os.Build;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
@@ -13,10 +20,12 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Chronometer;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
+import androidx.annotation.IdRes;
 import androidx.core.text.BidiFormatter;
 
 import com.openwatchproject.launcher.R;
@@ -29,16 +38,21 @@ public class NotiDrawer {
     public static final int COLOR_DEFAULT = 0; // AKA Color.TRANSPARENT
     public static final int COLOR_INVALID = 1;
 
-    private final Context context;
+    private final Context mContext;
     private final OpenWatchNotification mN;
     private final Style mStyle;
     private final StandardTemplateParams mParams;
 
     private boolean mUsesStandardHeader;
+    private boolean mIsLegacy;
+    private boolean mIsLegacyInitialized;
 
-    public NotiDrawer(Context context, OpenWatchNotification OpenWatchNotification) {
-        this.context = context;
-        this.mN = OpenWatchNotification;
+    private boolean mTintActionButtons;
+
+    public NotiDrawer(Context context, OpenWatchNotification openWatchNotification) {
+        this.mContext = context;
+        this.mTintActionButtons = true;
+        this.mN = openWatchNotification;
         this.mParams = new StandardTemplateParams();
 
         Style mStyle = null;
@@ -58,7 +72,7 @@ public class NotiDrawer {
 
                     break;
                 case "android.app.Notification$MediaStyle":
-
+                    mStyle = new MediaStyle(this);
                     break;
             }
         }
@@ -124,11 +138,11 @@ public class NotiDrawer {
     }
 
     private View applyStandardTemplate(int resId) {
-        return applyStandardTemplate(resId, mParams.reset().fillTextsFrom(mN));
+        return applyStandardTemplate(resId, mParams.reset().fillTextsFrom(this));
     }
 
     private View applyStandardTemplate(int resId, StandardTemplateParams p) {
-        View contentView = LayoutInflater.from(context).inflate(resId, null);
+        View contentView = LayoutInflater.from(mContext).inflate(resId, null);
 
         resetStandardTemplate(contentView);
 
@@ -138,12 +152,12 @@ public class NotiDrawer {
         if (p.title != null) {
             TextView t = contentView.findViewById(R.id.title);
             t.setVisibility(View.VISIBLE);
-            t.setText(processTextSpans(p.title));
+            t.setText(p.title);
             //t.setTextColor(mN.getTitleColor());
         }
         if (p.text != null) {
             TextView t = contentView.findViewById(R.id.text);
-            t.setText(processTextSpans(p.text));
+            t.setText(p.text);
             t.setTextColor(Color.WHITE);
             //t.setTextColor(mN.getTextColor());
             t.setVisibility(View.VISIBLE);
@@ -151,14 +165,7 @@ public class NotiDrawer {
 
         return contentView;
     }
-
-    private CharSequence processTextSpans(CharSequence text) {
-        /*if (hasForegroundColor()) {
-            return ContrastColorUtil.clearColorSpans(text);
-        }*/
-        return text;
-    }
-
+    
     /**
      * Resets the notification header to its original state
      */
@@ -212,6 +219,28 @@ public class NotiDrawer {
         i.setImageIcon(mN.getSmallIcon());
         i.setImageLevel(mN.getIconLevel());
         processSmallIconColor(mN.getSmallIcon(), contentView, p);
+    }
+
+    /**
+     * @return Whether we are currently building a notification from a legacy (an app that
+     *         doesn't create material notifications by itself) app.
+     */
+    private boolean isLegacy() {
+        if (!mIsLegacyInitialized) {
+            mIsLegacy = mN.getTargetSdkVersion()
+                    < Build.VERSION_CODES.LOLLIPOP;
+            mIsLegacyInitialized = true;
+        }
+        return mIsLegacy;
+    }
+
+    private CharSequence processLegacyText(CharSequence charSequence) {
+        boolean isAlreadyLightText = isLegacy() || textColorsNeedInversion();
+        if (isAlreadyLightText) {
+            return ContrastColorUtil.invertCharSequenceColors(charSequence);
+        } else {
+            return charSequence;
+        }
     }
 
     private void processSmallIconColor(Icon smallIcon, View contentView, StandardTemplateParams p) {
@@ -271,7 +300,7 @@ public class NotiDrawer {
         if (summaryText != null) {
             // TODO: Remove the span entirely to only have the string with propper formating.
             TextView ht = contentView.findViewById(R.id.header_text);
-            ht.setText(processTextSpans(summaryText));
+            ht.setText(summaryText);
             //setTextViewColorSecondary(ht, p);
             ht.setVisibility(View.VISIBLE);
             visible = true;
@@ -283,7 +312,7 @@ public class NotiDrawer {
     private void bindHeaderTextSecondary(View contentView, StandardTemplateParams p, boolean headerTextVisible) {
         if (!TextUtils.isEmpty(p.headerTextSecondary)) {
             TextView hts = contentView.findViewById(R.id.header_text_secondary);
-            hts.setText(processTextSpans(p.headerTextSecondary));
+            hts.setText(p.headerTextSecondary);
             //setTextViewColorSecondary(hts, p);
             hts.setVisibility(View.VISIBLE);
             if (headerTextVisible) {
@@ -345,8 +374,8 @@ public class NotiDrawer {
         boolean largeIconShown = bindLargeIcon(contentView, p);
         boolean replyIconShown = bindReplyIcon(contentView, p, largeIconShown);
         boolean iconContainerVisible = largeIconShown || replyIconShown;
-        contentView.findViewById(R.id.right_icon_container)
-                .setVisibility(iconContainerVisible ? View.VISIBLE : View.GONE);
+        //contentView.findViewById(R.id.right_icon_container)
+        //        .setVisibility(iconContainerVisible ? View.VISIBLE : View.GONE);
     }
 
     /**
@@ -423,8 +452,8 @@ public class NotiDrawer {
         } else {
             //contentView.setRemoteInputs(R.id.reply_icon_action, null);
         }
-        contentView.findViewById(R.id.separator).setVisibility(largeIconShown && actionVisible ? View.VISIBLE : View.GONE);
-        ria.setVisibility(actionVisible ? View.VISIBLE : View.GONE);
+        //contentView.findViewById(R.id.separator).setVisibility(largeIconShown && actionVisible ? View.VISIBLE : View.GONE);
+        //ria.setVisibility(actionVisible ? View.VISIBLE : View.GONE);
         return actionVisible;
     }
 
@@ -440,6 +469,19 @@ public class NotiDrawer {
         }
 
         return 0;
+    }
+
+    private boolean shouldTintActionButtons() {
+        return mTintActionButtons;
+    }
+
+    private boolean textColorsNeedInversion() {
+        if (mStyle == null || !Notification.MediaStyle.class.equals(mStyle.getClass())) {
+            return false;
+        }
+        int targetSdkVersion = mN.getTargetSdkVersion();
+        return targetSdkVersion > Build.VERSION_CODES.M
+                && targetSdkVersion < Build.VERSION_CODES.O;
     }
 
     private Notification.Action findReplyAction() {
@@ -458,7 +500,7 @@ public class NotiDrawer {
     }
 
     private View applyStandardTemplateWithActions(int layoutId) {
-        return applyStandardTemplateWithActions(layoutId, mParams.reset().fillTextsFrom(mN));
+        return applyStandardTemplateWithActions(layoutId, mParams.reset().fillTextsFrom(this));
     }
 
     private void resetStandardTemplateWithActions(View big) {
@@ -512,7 +554,7 @@ public class NotiDrawer {
                 boolean actionHasValidInput = hasValidRemoteInput(action);
                 validRemoteInput |= actionHasValidInput;
 
-                final RemoteViews button = generateActionButton(action, emphazisedMode, p);
+                final View button = generateActionButton(action, emphazisedMode, p);
                 if (actionHasValidInput && !emphazisedMode) {
                     // Clear the drawable
                     button.setInt(R.id.action0, "setBackgroundResource", 0);
@@ -531,7 +573,7 @@ public class NotiDrawer {
             big.findViewById(R.id.notification_material_reply_container).setVisibility(View.VISIBLE);
             big.findViewById(R.id.notification_material_reply_text_1_container).setVisibility(View.VISIBLE);
             TextView nmrt1 = big.findViewById(R.id.notification_material_reply_text_1);
-            nmrt1.setText(processTextSpans(replyText[0]));
+            nmrt1.setText(replyText[0]);
             //setTextViewColorSecondary(nmrt1, p);
             big.findViewById(R.id.notification_material_reply_progress)
                     .setVisibility(showSpinner ? View.VISIBLE : View.GONE);
@@ -543,14 +585,14 @@ public class NotiDrawer {
                     && p.maxRemoteInputHistory > 1) {
                 TextView nmrt2 = big.findViewById(R.id.notification_material_reply_text_2);
                 nmrt2.setVisibility(View.VISIBLE);
-                nmrt2.setText(processTextSpans(replyText[1]));
+                nmrt2.setText(replyText[1]);
                 //setTextViewColorSecondary(nmrt2, p);
 
                 if (replyText.length > 2 && !TextUtils.isEmpty(replyText[2])
                         && p.maxRemoteInputHistory > 2) {
                     TextView nmrt3 = big.findViewById(R.id.notification_material_reply_text_3);
                     nmrt3.setVisibility(View.VISIBLE);
-                    nmrt3.setText(processTextSpans(replyText[2]));
+                    nmrt3.setText(replyText[2]);
                     //setTextViewColorSecondary(nmrt3, p);
                 }
             }
@@ -570,15 +612,12 @@ public class NotiDrawer {
          */
         static final int MAX_REMOTE_INPUT_HISTORY_LINES = 3;
         private CharSequence mBigContentTitle;
-
         protected CharSequence mSummaryText = null;
-
         protected boolean mSummaryTextSet = false;
-
-        protected final NotiDrawer notiDrawer;
+        protected final NotiDrawer mNotiDrawer;
 
         public Style(NotiDrawer notiDrawer){
-            this.notiDrawer = notiDrawer;
+            this.mNotiDrawer = notiDrawer;
 
             mSummaryText = notiDrawer.mN.getSummaryText();
             mSummaryTextSet = mSummaryText != null;
@@ -602,7 +641,7 @@ public class NotiDrawer {
         }
 
         protected View getStandardView(int layoutId) {
-            StandardTemplateParams p = notiDrawer.mParams.reset().fillTextsFrom(notiDrawer.mN);
+            StandardTemplateParams p = mNotiDrawer.mParams.reset().fillTextsFrom(mNotiDrawer);
             return getStandardView(layoutId, p);
         }
 
@@ -618,7 +657,7 @@ public class NotiDrawer {
                 p.title = mBigContentTitle;
             }
 
-            View contentView = notiDrawer.applyStandardTemplateWithActions(layoutId, p);
+            View contentView = mNotiDrawer.applyStandardTemplateWithActions(layoutId, p);
 
             if (mBigContentTitle != null && mBigContentTitle.equals("")) {
                 contentView.findViewById(R.id.line1).setVisibility(View.GONE);
@@ -630,7 +669,7 @@ public class NotiDrawer {
         }
 
         /**
-         * Construct a Style-specific RemoteViews for the collapsed notification layout.
+         * Construct a Style-specific View for the collapsed notification layout.
          * The default implementation has nothing additional to add.
          *
          * @param increasedHeight true if this layout be created with an increased height.
@@ -640,14 +679,14 @@ public class NotiDrawer {
         }
 
         /**
-         * Construct a Style-specific RemoteViews for the final big notification layout.
+         * Construct a Style-specific View for the final big notification layout.
          */
         public View makeBigContentView() {
             return null;
         }
 
         /**
-         * Construct a Style-specific RemoteViews for the final HUN layout.
+         * Construct a Style-specific View for the final HUN layout.
          *
          * @param increasedHeight true if this layout be created with an increased height.
          */
@@ -706,81 +745,25 @@ public class NotiDrawer {
 
     /**
      * Helper class for generating large-format notifications that include a large image attachment.
-     *
-     * Here's how you'd set the <code>BigPictureStyle</code> on a notification:
-     * <pre class="prettyprint">
-     * Notification notif = new Notification.Builder(mContext)
-     *     .setContentTitle(&quot;New photo from &quot; + sender.toString())
-     *     .setContentText(subject)
-     *     .setSmallIcon(R.drawable.new_post)
-     *     .setLargeIcon(aBitmap)
-     *     .setStyle(new Notification.BigPictureStyle()
-     *         .bigPicture(aBigBitmap))
-     *     .build();
-     * </pre>
-     *
-     * @see Notification#bigContentView
      */
     public static class BigPictureStyle extends Style {
         private Bitmap mPicture;
         private Icon mBigLargeIcon;
         private boolean mBigLargeIconSet = false;
 
-        private BigPictureStyle(NotiDrawer notiDrawer) {
-            super(notiDrawer);
+        private BigPictureStyle(NotiDrawer nd) {
+            super(nd);
 
-            mBigLargeIcon = notiDrawer.mN.getLargeIconBig();
+            mBigLargeIcon = nd.mN.getLargeIconBig();
             mBigLargeIconSet = mBigLargeIcon != null;
-            mPicture = notiDrawer.mN.getPicture();
-        }
-
-        /**
-         * Overrides ContentTitle in the big form of the template.
-         * This defaults to the value passed to setContentTitle().
-         */
-        public BigPictureStyle setBigContentTitle(CharSequence title) {
-            internalSetBigContentTitle(title);
-            return this;
-        }
-
-        /**
-         * Set the first line of text after the detail section in the big form of the template.
-         */
-        public BigPictureStyle setSummaryText(CharSequence cs) {
-            internalSetSummaryText(cs);
-            return this;
+            mPicture = nd.mN.getPicture();
         }
 
         public Bitmap getBigPicture() {
             return mPicture;
         }
 
-        /**
-         * Provide the bitmap to be used as the payload for the BigPicture notification.
-         */
-        public BigPictureStyle bigPicture(Bitmap b) {
-            mPicture = b;
-            return this;
-        }
-
-        /**
-         * Override the large icon when the big notification is shown.
-         */
-        public BigPictureStyle bigLargeIcon(Bitmap b) {
-            return bigLargeIcon(b != null ? Icon.createWithBitmap(b) : null);
-        }
-
-        /**
-         * Override the large icon when the big notification is shown.
-         */
-        public BigPictureStyle bigLargeIcon(Icon icon) {
-            mBigLargeIconSet = true;
-            mBigLargeIcon = icon;
-            return this;
-        }
-
-        public static final int MIN_ASHMEM_BITMAP_SIZE = 128 * (1 << 10);
-
+        // TODO: I don't remember what this is doing here lol
         @Override
         public View makeContentView(boolean increasedHeight) {
             return makeBigContentView();
@@ -796,21 +779,27 @@ public class NotiDrawer {
             Icon oldLargeIcon = null;
             Bitmap largeIconLegacy = null;
             if (mBigLargeIconSet) {
-                oldLargeIcon = notiDrawer.mN.getLargeIcon();
-                notiDrawer.mN.setLargeIcon(mBigLargeIcon);
+                oldLargeIcon = mNotiDrawer.mN.getLargeIcon();
+                mNotiDrawer.mN.setLargeIcon(mBigLargeIcon);
+                // The legacy largeIcon might not allow us to clear the image, as it's taken in
+                // replacement if the other one is null. Because we're restoring these legacy icons
+                // for old listeners, this is in general non-null.
+                largeIconLegacy = mNotiDrawer.mN.getLegacyLargeIcon();
+                mNotiDrawer.mN.setLegacyLargeIcon(null);
             }
 
-            StandardTemplateParams p = notiDrawer.mParams.reset().fillTextsFrom(notiDrawer.mN);
+            StandardTemplateParams p = mNotiDrawer.mParams.reset().fillTextsFrom(mNotiDrawer);
             View contentView = getStandardView(R.layout.notification_template_material_big_picture, p);
             if (mSummaryTextSet) {
                 TextView t = contentView.findViewById(R.id.text);
-                t.setText(notiDrawer.processTextSpans(mSummaryText));
+                t.setText(mNotiDrawer.processLegacyText(mSummaryText));
                 //notiDrawer.setTextViewColorSecondary(t, p);
                 t.setVisibility(View.VISIBLE);
             }
 
             if (mBigLargeIconSet) {
-                notiDrawer.mN.setLargeIcon(oldLargeIcon);
+                mNotiDrawer.mN.setLargeIcon(oldLargeIcon);
+                mNotiDrawer.mN.setLegacyLargeIcon(largeIconLegacy);
             }
 
             ImageView bp = contentView.findViewById(R.id.big_picture);
@@ -847,6 +836,173 @@ public class NotiDrawer {
                     || a.getHeight() != b.getHeight()
                     || a.getConfig() != b.getConfig()
                     || a.getGenerationId() != b.getGenerationId();
+        }
+    }
+
+    /**
+     * Notification style for media playback notifications.
+     */
+    public static class MediaStyle extends Style {
+        // Changing max media buttons requires also changing templates
+        // (notification_template_material_media and notification_template_material_big_media).
+        static final int MAX_MEDIA_BUTTONS_IN_COMPACT = 3;
+        static final int MAX_MEDIA_BUTTONS = 5;
+        @IdRes private static final int[] MEDIA_BUTTON_IDS = {
+                R.id.action0,
+                //R.id.action1,
+                //R.id.action2,
+                //R.id.action3,
+                //R.id.action4,
+        };
+
+        private int[] mActionsToShowInCompact = null;
+        private MediaSession.Token mToken;
+
+        public MediaStyle(NotiDrawer notiDrawer) {
+            super(notiDrawer);
+
+            //mToken = extras.getParcelable(EXTRA_MEDIA_SESSION);
+            //mActionsToShowInCompact = extras.getIntArray(EXTRA_COMPACT_ACTIONS);
+        }
+        
+        @Override
+        public View makeContentView(boolean increasedHeight) {
+            return makeMediaContentView();
+        }
+
+        @Override
+        public View makeBigContentView() {
+            return makeMediaBigContentView();
+        }
+
+        @Override
+        public View makeHeadsUpContentView(boolean increasedHeight) {
+            View expanded = makeMediaBigContentView();
+            return expanded != null ? expanded : makeMediaContentView();
+        }
+
+        @Override
+        public boolean areNotificationsVisiblyDifferent(Style other) {
+            if (other == null || getClass() != other.getClass()) {
+                return true;
+            }
+            // All fields to compare are on the Notification object
+            return false;
+        }
+
+        private void bindMediaActionButton(View container, @IdRes int buttonId,
+                                           Notification.Action action, StandardTemplateParams p) {
+            final boolean tombstone = (action.actionIntent == null);
+            ImageView imageView = container.findViewById(buttonId);
+            imageView.setVisibility(View.VISIBLE);
+            imageView.setImageIcon(action.getIcon());
+
+            // If the action buttons should not be tinted, then just use the default
+            // notification color. Otherwise, just use the passed-in color.
+            Resources resources = mNotiDrawer.mContext.getResources();
+            Configuration currentConfig = resources.getConfiguration();
+            boolean inNightMode = (currentConfig.uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                    == Configuration.UI_MODE_NIGHT_YES;
+            int tintColor = mNotiDrawer.shouldTintActionButtons() || mNotiDrawer.isColorized(p)
+                    ? getActionColor(p)
+                    : ContrastColorUtil.resolveColor(mNotiDrawer.mContext,
+                    Notification.COLOR_DEFAULT, inNightMode);
+
+            ImageButton button = container.findViewById(buttonId);
+            button.getDrawable().mutate().setColorFilter(tintColor, PorterDuff.Mode.SRC_ATOP);
+
+            final TypedArray typedArray = mNotiDrawer.mContext.obtainStyledAttributes(
+                    new int[]{ android.R.attr.colorControlHighlight });
+            int rippleAlpha = Color.alpha(typedArray.getColor(0, 0));
+            typedArray.recycle();
+            int rippleColor = Color.argb(rippleAlpha, Color.red(tintColor), Color.green(tintColor),
+                    Color.blue(tintColor));
+            ((RippleDrawable) button.getBackground().mutate()).setColor(ColorStateList.valueOf(rippleColor));
+
+            if (!tombstone) {
+                //container.setOnClickPendingIntent(buttonId, action.actionIntent);
+            }
+            button.setContentDescription(action.title);
+        }
+
+        private View makeMediaContentView() {
+            StandardTemplateParams p = mNotiDrawer.mParams.reset().hasProgress(false).fillTextsFrom(
+                    mNotiDrawer);
+            View view = mNotiDrawer.applyStandardTemplate(
+                    R.layout.notification_template_material_media, p);
+
+            //final int numActions = mNotiDrawer.mActions.size();
+            //final int numActionsToShow = mActionsToShowInCompact == null
+            //        ? 0
+            //        : Math.min(mActionsToShowInCompact.length, MAX_MEDIA_BUTTONS_IN_COMPACT);
+            //if (numActionsToShow > numActions) {
+            //    throw new IllegalArgumentException(String.format(
+            //            "setShowActionsInCompactView: action %d out of bounds (max %d)",
+            //            numActions, numActions - 1));
+            //}
+            for (int i = 0; i < MAX_MEDIA_BUTTONS_IN_COMPACT; i++) {
+                //if (i < numActionsToShow) {
+                //    final Notification.Action action = mNotiDrawer.mActions.get(mActionsToShowInCompact[i]);
+                //    bindMediaActionButton(view, MEDIA_BUTTON_IDS[i], action, p);
+                //} else {
+                //    view.findViewById(MEDIA_BUTTON_IDS[i]).setVisibility(View.GONE);
+                //}
+            }
+            handleImage(view);
+            // handle the content margin
+            int endMargin = R.dimen.notification_content_margin_end;
+            if (mNotiDrawer.mN.getLargeIcon() != null) {
+                endMargin = R.dimen.notification_media_image_margin_end;
+            }
+            //view.setViewLayoutMarginEndDimen(R.id.notification_main_column, endMargin);
+            return view;
+        }
+
+        private int getActionColor(StandardTemplateParams p) {
+            return mNotiDrawer.resolveContrastColor(p);
+            //return mNotiDrawer.isColorized(p) ? mNotiDrawer.getPrimaryTextColor(p)
+              //      : mNotiDrawer.resolveContrastColor(p);
+        }
+
+        private View makeMediaBigContentView() {
+            //final int actionCount = Math.min(mNotiDrawer.mActions.size(), MAX_MEDIA_BUTTONS);
+            // Dont add an expanded view if there is no more content to be revealed
+            int actionsInCompact = mActionsToShowInCompact == null
+                    ? 0
+                    : Math.min(mActionsToShowInCompact.length, MAX_MEDIA_BUTTONS_IN_COMPACT);
+            //if (mNotiDrawer.mN.getLargeIcon() == null && actionCount <= actionsInCompact) {
+            //    return null;
+            //}
+            StandardTemplateParams p = mNotiDrawer.mParams.reset().hasProgress(false).fillTextsFrom(
+                    mNotiDrawer);
+            View big = mNotiDrawer.applyStandardTemplate(
+                    R.layout.notification_template_material_big_media, p);
+
+            for (int i = 0; i < MAX_MEDIA_BUTTONS; i++) {
+                //if (i < actionCount) {
+                //    bindMediaActionButton(big, MEDIA_BUTTON_IDS[i], mNotiDrawer.mActions.get(i), p);
+                //} else {
+                //    big.setViewVisibility(MEDIA_BUTTON_IDS[i], View.GONE);
+                //}
+            }
+            //bindMediaActionButton(big, R.id.media_seamless, new Notification.Action(R.drawable.ic_media_seamless,
+            //        mNotiDrawer.mContext.getString(
+            //                R.string.ext_media_seamless_action), null), p);
+            //big.setViewVisibility(R.id.media_seamless, View.GONE);
+            handleImage(big);
+            return big;
+        }
+
+        private void handleImage(View contentView) {
+            if (mNotiDrawer.mN.getLargeIcon() != null) {
+                //contentView.setViewLayoutMarginEndDimen(R.id.line1, 0);
+                //contentView.setViewLayoutMarginEndDimen(R.id.text, 0);
+            }
+        }
+
+        @Override
+        protected boolean hasProgress() {
+            return false;
         }
     }
 
@@ -919,15 +1075,16 @@ public class NotiDrawer {
             return this;
         }
 
-        final StandardTemplateParams fillTextsFrom(OpenWatchNotification pn) {
-            this.title = pn.getTitle();
+        final StandardTemplateParams fillTextsFrom(NotiDrawer nd) {
+            OpenWatchNotification n = nd.mN;
+            this.title = nd.processLegacyText(n.getTitle());
 
-            CharSequence text = pn.getBigText();
+            CharSequence text = n.getBigText();
             if (TextUtils.isEmpty(text)) {
-                text = pn.getText();
+                text = n.getText();
             }
-            this.text = text;
-            this.summaryText = pn.getSubText();
+            this.text = nd.processLegacyText(text);
+            this.summaryText = n.getSubText();
             return this;
         }
 

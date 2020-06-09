@@ -17,4 +17,7 @@
     <color name="indicator_unselected">#4D000000</color>
     <color name="black_trans80">#33000000</color>
     <color name="cyan">#00BCD4</color>
+
+    <color name="notification_default_color_dark">#de000000</color>
+    <color name="notification_default_color_light">#a3202124</color>
 </resources>

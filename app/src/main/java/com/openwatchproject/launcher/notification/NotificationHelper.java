@@ -7,15 +7,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NotificationHelper {
+    private NLService nlService;
     private final List<StatusBarNotification> postedNotifications;
     private final List<StatusBarNotification> removedNotifications;
     private NotificationListenerService.RankingMap rankingMap;
     private final List<NotificationListener> listeners;
 
     public NotificationHelper() {
+        nlService = null;
         this.postedNotifications = new ArrayList<>();
         this.removedNotifications = new ArrayList<>();
         this.listeners = new ArrayList<>();
+    }
+
+    public void setNlService(NLService nlService) {
+        this.nlService = nlService;
+    }
+
+    public NLService getNlService() {
+        return nlService;
     }
 
     public void clearAll() {

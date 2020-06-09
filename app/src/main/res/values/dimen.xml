@@ -74,4 +74,5 @@
     <dimen name="notification_messaging_spacing">6dp</dimen>
     <dimen name="notification_subtext_size" tools:override="true">18sp</dimen>
     <dimen name="notification_right_icon_size" tools:override="true">64dp</dimen>
+    <dimen name="notification_media_image_margin_end">72dp</dimen>
 </resources>

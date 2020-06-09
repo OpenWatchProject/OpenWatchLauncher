@@ -3,7 +3,6 @@ package com.openwatchproject.launcher.notification;
 import android.app.Notification;
 import android.content.Context;
 import android.graphics.Bitmap;
-import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.media.session.MediaSession;
 import android.os.Build;
@@ -12,7 +11,7 @@ import android.service.notification.StatusBarNotification;
 import android.text.TextUtils;
 import android.util.Log;
 
-import java.lang.reflect.Field;
+import com.openwatchproject.launcher.Utils;
 
 import static android.app.Notification.EXTRA_BIG_TEXT;
 import static android.app.Notification.EXTRA_CHRONOMETER_COUNT_DOWN;
@@ -93,11 +92,15 @@ public class OpenWatchNotification {
     private String[] textLines;
     private String title;
     private String titleBig;
+    private int targetSdkVersion = Build.VERSION_CODES.Q;
 
     private StatusBarNotification sbn;
+    private Context c;
+    private boolean isPhoneNotification = false;
 
     public OpenWatchNotification(Context c, StatusBarNotification sbn) {
         this.sbn = sbn;
+        this.c = c;
 
         this.appName = getApplicationName(c, sbn.getPackageName());
 
@@ -164,12 +167,10 @@ public class OpenWatchNotification {
         this.conversationTitle = extras.getCharSequence(EXTRA_CONVERSATION_TITLE) == null ? null : extras.getCharSequence(EXTRA_CONVERSATION_TITLE).toString();
         this.infoText = extras.getCharSequence(EXTRA_INFO_TEXT) == null ? null : extras.getCharSequence(EXTRA_INFO_TEXT).toString();
         this.largeIconBig = extras.getParcelable(EXTRA_LARGE_ICON_BIG);
-        if (this.largeIconBig == null) Log.d(TAG, "PhoneNotification: largeIconBig is null!!!!!");
         MediaSession.Token mediaSessionToken = extras.getParcelable(EXTRA_MEDIA_SESSION);
         this.mediaSession = mediaSessionToken != null ? mediaSessionToken.hashCode() : null;
         //this.messages = (Bundle[]) extras.getParcelableArray(EXTRA_MESSAGES);
         this.messages = null;
-        if (extras.getParcelable(EXTRA_PICTURE) == null) Log.d(TAG, "PhoneNotification: picture is null!!!!!");
         this.picture = extras.getParcelable(EXTRA_PICTURE);
         this.progress = extras.getInt(EXTRA_PROGRESS);
         this.progressIndeterminate = extras.getBoolean(EXTRA_PROGRESS_INDETERMINATE);
@@ -194,7 +195,7 @@ public class OpenWatchNotification {
 
         // Notification builder
         if (extras.getBoolean("android.contains.customView", false))
-            throw new RuntimeException("This notification has a customView which is not supported right now!");
+            throw new IllegalStateException("This notification has a customView which is not supported right now!");
 
         Notification.Builder b = Notification.Builder.recoverBuilder(c, sbn.getNotification());
         if (TextUtils.isEmpty(template)) {
@@ -261,7 +262,11 @@ public class OpenWatchNotification {
     }
 
     public int getTargetSdkVersion() {
-        return Build.VERSION_CODES.Q;
+        if (isPhoneNotification) {
+            return targetSdkVersion;
+        }
+
+        return Utils.getTargetSdkVersion(c, packageName);
     }
 
     public String getInfoText() {
@@ -334,6 +339,14 @@ public class OpenWatchNotification {
 
     public void setLargeIcon(Icon largeIcon) {
         this.largeIcon = largeIcon;
+    }
+
+    public Bitmap getLegacyLargeIcon() {
+        return null;
+    }
+
+    public void setLegacyLargeIcon(Bitmap legacyLargeIcon) {
+
     }
 
     /**
