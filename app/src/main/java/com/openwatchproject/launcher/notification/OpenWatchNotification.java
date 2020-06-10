@@ -8,10 +8,11 @@ import android.media.session.MediaSession;
 import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
-import android.text.TextUtils;
 import android.util.Log;
 
 import com.openwatchproject.launcher.Utils;
+
+import java.util.Arrays;
 
 import static android.app.Notification.EXTRA_BIG_TEXT;
 import static android.app.Notification.EXTRA_CHRONOMETER_COUNT_DOWN;
@@ -38,6 +39,15 @@ import static com.openwatchproject.launcher.Utils.getApplicationName;
 public class OpenWatchNotification {
     private static final String TAG = "PhoneNotification";
 
+    /**
+     * Maximum number of (generic) action buttons in a notification (contextual action buttons are
+     * handled separately).
+     * @hide
+     */
+    public static final int MAX_ACTION_BUTTONS = 3;
+
+    public static final int FLAG_CAN_COLORIZE = 0x00000800;
+
     // Custom
     private String appName;
     private long chronometerBase;
@@ -56,7 +66,7 @@ public class OpenWatchNotification {
     private boolean isOngoing;
 
     // Notification data
-    //private NotificationAction[] actions;
+    private Notification.Action[] actions;
     private String category;
     private int color;
     private int flags;
@@ -66,6 +76,7 @@ public class OpenWatchNotification {
     private long when;
     private String group;
     private Icon largeIcon;
+    private Bitmap largeIconLegacy;
     private Icon smallIcon;
     private String sortKey;
     private int iconLevel;
@@ -77,7 +88,6 @@ public class OpenWatchNotification {
     private String conversationTitle;
     private String infoText;
     private Icon largeIconBig;
-    private Integer mediaSession;
     private Bundle[] messages;
     private Bitmap picture;
     private int progress;
@@ -93,6 +103,10 @@ public class OpenWatchNotification {
     private String title;
     private String titleBig;
     private int targetSdkVersion = Build.VERSION_CODES.Q;
+    private MediaSession.Token mediaSession;
+    private boolean colorized;
+
+    public boolean mUsesStandardHeader;
 
     private StatusBarNotification sbn;
     private Context c;
@@ -118,38 +132,12 @@ public class OpenWatchNotification {
 
         // Notification data
         Notification n = sbn.getNotification();
-        /*if (n.actions == null) {
-            this.actions = null;
-        } else {
-            this.actions = new NotificationAction[n.actions.length];
-            Field resIdField;
-            try {
-                resIdField = Icon.class.getDeclaredField("mInt1");
-                resIdField.setAccessible(true);
-            } catch (NoSuchFieldException e) {
-                resIdField = null;
-            }
-
-            for (int i = 0; i < actions.length; i++) {
-                Notification.Action na = n.actions[i];
-                Drawable icon;
-                if (resIdField != null && na.getIcon() != null) {
-                    try {
-                        icon = Utils.getDrawableFromPackage(c, resIdField.getInt(na.getIcon()), sbn.getPackageName());
-                    } catch (IllegalAccessException e) {
-                        icon = null;
-                    }
-                } else {
-                    icon = null;
-                }
-                this.actions[i] = new NotificationAction(na.title.toString(), icon, na.hashCode());
-            }
-        }*/
+        this.actions = n.actions;
         this.category = n.category;
         this.color = n.color;
         this.flags = n.flags;
         this.number = n.number;
-        this.tickerText = n.tickerText != null ? n.tickerText.toString() : null;
+        this.tickerText = csToStringOrNull(n.tickerText);
         this.visibility = n.visibility;
         this.when = n.when;
         this.group = n.getGroup();
@@ -160,15 +148,12 @@ public class OpenWatchNotification {
 
         // Notification data extras
         Bundle extras = n.extras;
-        //Log.d(TAG, "PhoneNotification: " + extras.getCharSequence(EXTRA_TITLE).getClass().getName());
-        this.bigText = extras.getCharSequence(EXTRA_BIG_TEXT) == null ? null : extras.getCharSequence(EXTRA_BIG_TEXT).toString();
+        this.bigText = csToStringOrNull(extras.getCharSequence(EXTRA_BIG_TEXT));
         this.chronometerCountDown = extras.getBoolean(EXTRA_CHRONOMETER_COUNT_DOWN);
         this.compactActions = extras.getIntArray(EXTRA_COMPACT_ACTIONS);
-        this.conversationTitle = extras.getCharSequence(EXTRA_CONVERSATION_TITLE) == null ? null : extras.getCharSequence(EXTRA_CONVERSATION_TITLE).toString();
-        this.infoText = extras.getCharSequence(EXTRA_INFO_TEXT) == null ? null : extras.getCharSequence(EXTRA_INFO_TEXT).toString();
+        this.conversationTitle = csToStringOrNull(extras.getCharSequence(EXTRA_CONVERSATION_TITLE));
+        this.infoText = csToStringOrNull(extras.getCharSequence(EXTRA_INFO_TEXT));
         this.largeIconBig = extras.getParcelable(EXTRA_LARGE_ICON_BIG);
-        MediaSession.Token mediaSessionToken = extras.getParcelable(EXTRA_MEDIA_SESSION);
-        this.mediaSession = mediaSessionToken != null ? mediaSessionToken.hashCode() : null;
         //this.messages = (Bundle[]) extras.getParcelableArray(EXTRA_MESSAGES);
         this.messages = null;
         this.picture = extras.getParcelable(EXTRA_PICTURE);
@@ -177,32 +162,40 @@ public class OpenWatchNotification {
         this.progressMax = extras.getInt(EXTRA_PROGRESS_MAX);
         this.showChronometer = extras.getBoolean(EXTRA_SHOW_CHRONOMETER);
         this.showWhen = extras.getBoolean(EXTRA_SHOW_WHEN);
-        this.subText = extras.getCharSequence(EXTRA_SUB_TEXT) == null ? null : extras.getCharSequence(EXTRA_SUB_TEXT).toString();
-        this.summaryText = extras.getCharSequence(EXTRA_SUMMARY_TEXT) == null ? null : extras.getCharSequence(EXTRA_SUMMARY_TEXT).toString();
+        this.subText = csToStringOrNull(extras.getCharSequence(EXTRA_SUB_TEXT));
+        this.summaryText = csToStringOrNull(extras.getCharSequence(EXTRA_SUMMARY_TEXT));
         this.template = extras.getString(EXTRA_TEMPLATE);
-        this.text = extras.getCharSequence(EXTRA_TEXT) == null ? null : extras.getCharSequence(EXTRA_TEXT).toString();
-        CharSequence[] textLinesCsA = extras.getCharSequenceArray(EXTRA_TEXT_LINES);
-        if (textLinesCsA != null) {
-            this.textLines = new String[textLinesCsA.length];
-            for (int i = 0; i < textLinesCsA.length; i++) {
-                this.textLines[i] = textLinesCsA[i].toString();
-            }
-        } else {
-            this.textLines = null;
-        }
-        this.title = extras.getCharSequence(EXTRA_TITLE) == null ? null : extras.getCharSequence(EXTRA_TITLE).toString();
-        this.titleBig = extras.getCharSequence(EXTRA_TITLE_BIG) == null ? null : extras.getCharSequence(EXTRA_TITLE_BIG).toString();
+        this.text = csToStringOrNull(extras.getCharSequence(EXTRA_TEXT));
+        this.textLines = csaToStringArrayOrNull(extras.getCharSequenceArray(EXTRA_TEXT_LINES));
+        this.title = csToStringOrNull(extras.getCharSequence(EXTRA_TITLE));
+        this.titleBig = csToStringOrNull(extras.getCharSequence(EXTRA_TITLE_BIG));
+        this.mediaSession = extras.getParcelable(EXTRA_MEDIA_SESSION);
 
         // Notification builder
         if (extras.getBoolean("android.contains.customView", false))
             throw new IllegalStateException("This notification has a customView which is not supported right now!");
 
-        Notification.Builder b = Notification.Builder.recoverBuilder(c, sbn.getNotification());
-        if (TextUtils.isEmpty(template)) {
+        // TODO: Do something with this
+        //Notification.Builder b = Notification.Builder.recoverBuilder(c, sbn.getNotification());
 
-        } else {
-            //throw new RuntimeException("This notification has a template: " + template + "!");
-        }
+        Log.d(TAG, "OpenWatchNotification: " + toString());
+    }
+
+    private static String[] csaToStringArrayOrNull(CharSequence[] csa) {
+        if (csa == null)
+            return null;
+
+        String[] result = new String[csa.length];
+        for (int i = 0; i < csa.length; i++)
+            result[i] = csa[i].toString();
+        return result;
+    }
+
+    private static String csToStringOrNull(CharSequence cs) {
+        if (cs == null)
+            return null;
+
+        return cs.toString();
     }
 
     public String getAppName() {
@@ -213,9 +206,9 @@ public class OpenWatchNotification {
         return packageName + ":" + id;
     }
 
-    //public NotificationAction[] getActions() {
-    //    return actions;
-    //}
+    public Notification.Action[] getActions() {
+        return actions;
+    }
 
     public Long getWhen() {
         return when;
@@ -235,6 +228,10 @@ public class OpenWatchNotification {
 
     public Icon getSmallIcon() {
         return smallIcon;
+    }
+
+    public void setSmallIcon(Icon smallIcon) {
+        this.smallIcon = smallIcon;
     }
 
     public String getSummaryText() {
@@ -349,6 +346,85 @@ public class OpenWatchNotification {
 
     }
 
+    public MediaSession.Token getMediaSession() {
+        return null;
+    }
+
+    /**
+     * @return whether this notification is a foreground service notification
+     */
+    public boolean isForegroundService() {
+        return (flags & Notification.FLAG_FOREGROUND_SERVICE) != 0;
+    }
+
+    /**
+     * @return whether this notification has a media session attached
+     */
+    public boolean hasMediaSession() {
+        return mediaSession != null;
+    }
+
+    /**
+     * @return true if this notification is colorized.
+     */
+    public boolean isColorized() {
+        if (isColorizedMedia()) {
+            return true;
+        }
+        return colorized
+                && (hasColorizedPermission() || isForegroundService());
+    }
+
+    /**
+     * Returns whether an app can colorize due to the android.permission.USE_COLORIZED_NOTIFICATIONS
+     * permission. The permission is checked when a notification is enqueued.
+     */
+    private boolean hasColorizedPermission() {
+        return (flags & FLAG_CAN_COLORIZE) != 0;
+    }
+
+    /**
+     * @return true if this notification is colorized and it is a media notification
+     */
+    public boolean isColorizedMedia() {
+        if ("android.app.Notification$MediaStyle".equals(template)) {
+            if (colorized && hasMediaSession()) {
+                return true;
+            }
+        } else if ("android.app.Notification$DecoratedMediaCustomViewStyle".equals(template)) {
+            if (colorized && hasMediaSession()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @return true if this is a media notification
+     */
+    public boolean isMediaNotification() {
+        if ("android.app.Notification$MediaStyle".equals(template)) {
+            return true;
+        } else if ("android.app.Notification$DecoratedMediaCustomViewStyle".equals(template)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @return true if this notification is showing as a bubble
+     * */
+    public boolean isBubbleNotification() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return (flags & Notification.FLAG_BUBBLE) != 0;
+        }
+        return false;
+    }
+
+    private boolean hasLargeIcon() {
+        return largeIcon != null || largeIconLegacy != null;
+    }
+
     /**
      * @return true if the notification will show the time; false otherwise
      */
@@ -361,5 +437,65 @@ public class OpenWatchNotification {
      */
     public boolean showsChronometer() {
         return when != 0 && showChronometer;
+    }
+
+    @Override
+    public String toString() {
+        return "OpenWatchNotification{" +
+                "appName='" + appName + '\'' +
+                ", chronometerBase=" + chronometerBase +
+                ", profileBadge=" + profileBadge +
+                ", groupKey='" + groupKey + '\'' +
+                ", id=" + id +
+                ", key='" + key + '\'' +
+                ", overrideGroupKey='" + overrideGroupKey + '\'' +
+                ", packageName='" + packageName + '\'' +
+                ", postTime=" + postTime +
+                ", tag='" + tag + '\'' +
+                ", isClearable=" + isClearable +
+                ", isGroup=" + isGroup +
+                ", isOngoing=" + isOngoing +
+                ", actions=" + Arrays.toString(actions) +
+                ", category='" + category + '\'' +
+                ", color=" + color +
+                ", flags=" + flags +
+                ", number=" + number +
+                ", tickerText='" + tickerText + '\'' +
+                ", visibility=" + visibility +
+                ", when=" + when +
+                ", group='" + group + '\'' +
+                ", largeIcon=" + largeIcon +
+                ", largeIconLegacy=" + largeIconLegacy +
+                ", smallIcon=" + smallIcon +
+                ", sortKey='" + sortKey + '\'' +
+                ", iconLevel=" + iconLevel +
+                ", bigText='" + bigText + '\'' +
+                ", chronometerCountDown=" + chronometerCountDown +
+                ", compactActions=" + Arrays.toString(compactActions) +
+                ", conversationTitle='" + conversationTitle + '\'' +
+                ", infoText='" + infoText + '\'' +
+                ", largeIconBig=" + largeIconBig +
+                ", messages=" + Arrays.toString(messages) +
+                ", picture=" + picture +
+                ", progress=" + progress +
+                ", progressIndeterminate=" + progressIndeterminate +
+                ", progressMax=" + progressMax +
+                ", showChronometer=" + showChronometer +
+                ", showWhen=" + showWhen +
+                ", subText='" + subText + '\'' +
+                ", summaryText='" + summaryText + '\'' +
+                ", template='" + template + '\'' +
+                ", text='" + text + '\'' +
+                ", textLines=" + Arrays.toString(textLines) +
+                ", title='" + title + '\'' +
+                ", titleBig='" + titleBig + '\'' +
+                ", targetSdkVersion=" + targetSdkVersion +
+                ", mediaSession=" + mediaSession +
+                ", colorized=" + colorized +
+                ", mUsesStandardHeader=" + mUsesStandardHeader +
+                ", sbn=" + sbn +
+                ", c=" + c +
+                ", isPhoneNotification=" + isPhoneNotification +
+                '}';
     }
 }

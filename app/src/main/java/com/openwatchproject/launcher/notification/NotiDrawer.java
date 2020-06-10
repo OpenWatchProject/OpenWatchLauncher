@@ -1,6 +1,8 @@
 package com.openwatchproject.launcher.notification;
 
 import android.app.Notification;
+import android.app.Person;
+import android.app.RemoteInput;
 import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Configuration;
@@ -14,6 +16,8 @@ import android.graphics.drawable.Icon;
 import android.graphics.drawable.RippleDrawable;
 import android.media.session.MediaSession;
 import android.os.Build;
+import android.os.Bundle;
+import android.os.SystemClock;
 import android.text.SpannableStringBuilder;
 import android.text.TextUtils;
 import android.util.Log;
@@ -23,14 +27,25 @@ import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
+import android.widget.RemoteViews;
 import android.widget.TextView;
 
+import androidx.annotation.ColorInt;
 import androidx.annotation.IdRes;
+import androidx.appcompat.widget.DrawableUtils;
 import androidx.core.text.BidiFormatter;
 
 import com.openwatchproject.launcher.R;
 import com.openwatchproject.launcher.notification.view.DateTimeView;
 import com.openwatchproject.launcher.notification.view.NotificationHeaderView;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static androidx.core.graphics.ColorUtils.calculateContrast;
+import static androidx.core.graphics.ColorUtils.calculateLuminance;
+import static androidx.core.graphics.ColorUtils.compositeColors;
+import static com.openwatchproject.launcher.notification.OpenWatchNotification.MAX_ACTION_BUTTONS;
 
 public class NotiDrawer {
     private static final String TAG = "NotiDrawer";
@@ -38,16 +53,74 @@ public class NotiDrawer {
     public static final int COLOR_DEFAULT = 0; // AKA Color.TRANSPARENT
     public static final int COLOR_INVALID = 1;
 
-    private final Context mContext;
     private final OpenWatchNotification mN;
-    private final Style mStyle;
-    private final StandardTemplateParams mParams;
 
-    private boolean mUsesStandardHeader;
+    public static final String EXTRA_REBUILD_CONTENT_VIEW_ACTION_COUNT =
+            "android.rebuild.contentViewActionCount";
+    public static final String EXTRA_REBUILD_BIG_CONTENT_VIEW_ACTION_COUNT
+            = "android.rebuild.bigViewActionCount";
+    public static final String EXTRA_REBUILD_HEADS_UP_CONTENT_VIEW_ACTION_COUNT
+            = "android.rebuild.hudViewActionCount";
+
+    private static final boolean USE_ONLY_TITLE_IN_LOW_PRIORITY_SUMMARY =
+            true;//SystemProperties.getBoolean("notifications.only_title", true);
+
+    /**
+     * The lightness difference that has to be added to the primary text color to obtain the
+     * secondary text color when the background is light.
+     */
+    private static final int LIGHTNESS_TEXT_DIFFERENCE_LIGHT = 20;
+
+    /**
+     * The lightness difference that has to be added to the primary text color to obtain the
+     * secondary text color when the background is dark.
+     * A bit less then the above value, since it looks better on dark backgrounds.
+     */
+    private static final int LIGHTNESS_TEXT_DIFFERENCE_DARK = -10;
+
+    private Context mContext;
+    private Bundle mUserExtras = new Bundle();
+    private Style mStyle;
+    private ArrayList<Notification.Action> mActions = new ArrayList<>(MAX_ACTION_BUTTONS);
+    private ArrayList<Person> mPersonList = new ArrayList<>();
+    private ContrastColorUtil mColorUtil;
     private boolean mIsLegacy;
     private boolean mIsLegacyInitialized;
 
+    /**
+     * Caches a contrast-enhanced version of {@link #mCachedContrastColorIsFor}.
+     */
+    private int mCachedContrastColor = COLOR_INVALID;
+    private int mCachedContrastColorIsFor = COLOR_INVALID;
+    /**
+     * Caches a ambient version of {@link #mCachedAmbientColorIsFor}.
+     */
+    private int mCachedAmbientColor = COLOR_INVALID;
+    private int mCachedAmbientColorIsFor = COLOR_INVALID;
+    /**
+     * A neutral color color that can be used for icons.
+     */
+    private int mNeutralColor = COLOR_INVALID;
+
+    /**
+     * Caches an instance of StandardTemplateParams. Note that this may have been used before,
+     * so make sure to call {@link StandardTemplateParams#reset()} before using it.
+     */
+    StandardTemplateParams mParams = new StandardTemplateParams();
+    private int mTextColorsAreForBackground = COLOR_INVALID;
+    private int mPrimaryTextColor = COLOR_INVALID;
+    private int mSecondaryTextColor = COLOR_INVALID;
+    private int mBackgroundColor = COLOR_INVALID;
+    private int mForegroundColor = COLOR_INVALID;
+    /**
+     * A temporary location where actions are stored. If != null the view originally has action
+     * but doesn't have any for this inflation.
+     */
+    private ArrayList<Notification.Action> mOriginalActions;
+    private boolean mRebuildStyledRemoteViews;
+
     private boolean mTintActionButtons;
+    private boolean mInNightMode;
 
     public NotiDrawer(Context context, OpenWatchNotification openWatchNotification) {
         this.mContext = context;
@@ -72,11 +145,579 @@ public class NotiDrawer {
 
                     break;
                 case "android.app.Notification$MediaStyle":
-                    mStyle = new MediaStyle(this);
+                    //mStyle = new MediaStyle(this);
                     break;
             }
         }
         this.mStyle = mStyle;
+    }
+
+    private void bindProfileBadge(View contentView, StandardTemplateParams p) {
+        Bitmap profileBadge = mN.getProfileBadge();
+
+        if (profileBadge != null) {
+            DrawUtils.setImageViewBitmap(contentView, R.id.profile_badge, profileBadge);
+            DrawUtils.setViewVisibility(contentView, R.id.profile_badge, View.VISIBLE);
+            if (isColorized(p)) {
+                DrawUtils.setDrawableTint(contentView, R.id.profile_badge, false,
+                        getPrimaryTextColor(p), PorterDuff.Mode.SRC_ATOP);
+            }
+        }
+    }
+
+    private void bindAlertedIcon(View contentView, StandardTemplateParams p) {
+        /*DrawUtils.setDrawableTint(contentView, 
+                R.id.alerted_icon,
+                false /* targetBackground *//*,
+                getNeutralColor(p),
+                PorterDuff.Mode.SRC_ATOP);*/
+    }
+
+    private void resetStandardTemplate(View contentView) {
+        resetNotificationHeader(contentView);
+        DrawUtils.setViewVisibility(contentView, R.id.right_icon, View.GONE);
+        DrawUtils.setViewVisibility(contentView, R.id.title, View.GONE);
+        DrawUtils.setTextViewText(contentView, R.id.title, null);
+        DrawUtils.setViewVisibility(contentView, R.id.text, View.GONE);
+        DrawUtils.setTextViewText(contentView, R.id.text, null);
+        DrawUtils.setViewVisibility(contentView, R.id.text_line_1, View.GONE);
+        DrawUtils.setTextViewText(contentView, R.id.text_line_1, null);
+    }
+
+    /**
+     * Resets the notification header to its original state
+     */
+    private void resetNotificationHeader(View contentView) {
+        // Small icon doesn't need to be reset, as it's always set. Resetting would prevent
+        // re-using the drawable when the notification is updated.
+        DrawUtils.setExpanded(contentView, R.id.notification_header, false);
+        DrawUtils.setTextViewText(contentView, R.id.app_name_text, null);
+        DrawUtils.setViewVisibility(contentView, R.id.chronometer, View.GONE);
+        DrawUtils.setViewVisibility(contentView, R.id.header_text_layout, View.GONE);
+        DrawUtils.setViewVisibility(contentView, R.id.header_text, View.GONE);
+        DrawUtils.setTextViewText(contentView, R.id.header_text, null);
+        DrawUtils.setViewVisibility(contentView, R.id.header_text_secondary, View.GONE);
+        DrawUtils.setTextViewText(contentView, R.id.header_text_secondary, null);
+        DrawUtils.setViewVisibility(contentView, R.id.header_text_divider, View.GONE);
+        //DrawUtils.setViewVisibility(contentView, R.id.time_divider, View.GONE);
+        DrawUtils.setViewVisibility(contentView, R.id.time, View.GONE);
+        DrawUtils.setImageViewIcon(contentView, R.id.profile_badge, null);
+        DrawUtils.setViewVisibility(contentView, R.id.profile_badge, View.GONE);
+        //DrawUtils.setViewVisibility(contentView, R.id.alerted_icon, View.GONE);
+        mN.mUsesStandardHeader = false;
+    }
+
+    private View applyStandardTemplate(int resId) {
+        return applyStandardTemplate(resId, mParams.reset().fillTextsFrom(this));
+    }
+
+    private View applyStandardTemplate(int resId, StandardTemplateParams p) {
+        View contentView = LayoutInflater.from(mContext).inflate(resId, null);
+
+        resetStandardTemplate(contentView);
+
+        updateBackgroundColor(contentView, p);
+        bindNotificationHeader(contentView, p);
+        bindLargeIconAndReply(contentView, p);
+        boolean showProgress = handleProgressBar(contentView, mN, p);
+        if (p.title != null) {
+            DrawUtils.setViewVisibility(contentView, R.id.title, View.VISIBLE);
+            DrawUtils.setTextViewText(contentView, R.id.title, processTextSpans(p.title));
+            setTextViewColorPrimary(contentView, R.id.title, p);
+        }
+        if (p.text != null) {
+            int textId = showProgress ? R.id.text_line_1
+                    : R.id.text;
+            DrawUtils.setTextViewText(contentView, textId, processTextSpans(p.text));
+            setTextViewColorSecondary(contentView, textId, p);
+            DrawUtils.setViewVisibility(contentView, textId, View.VISIBLE);
+        }
+
+        return contentView;
+    }
+
+    private CharSequence processTextSpans(CharSequence text) {
+        if (hasForegroundColor() || mInNightMode) {
+            return ContrastColorUtil.clearColorSpans(text);
+        }
+        return text;
+    }
+
+    private void setTextViewColorPrimary(View contentView, int id,
+                                         StandardTemplateParams p) {
+        ensureColors(p);
+        DrawUtils.setTextColor(contentView, id, mPrimaryTextColor);
+    }
+
+    private boolean hasForegroundColor() {
+        return mForegroundColor != COLOR_INVALID;
+    }
+
+    public int getPrimaryTextColor() {
+        return getPrimaryTextColor(mParams);
+    }
+
+    /**
+     * @param p the template params to inflate this with
+     * @return the primary text color
+     */
+    public int getPrimaryTextColor(StandardTemplateParams p) {
+        ensureColors(p);
+        return mPrimaryTextColor;
+    }
+
+    /**
+     * Return the secondary text color using the existing template params
+     */
+    public int getSecondaryTextColor() {
+        return getSecondaryTextColor(mParams);
+    }
+
+    /**
+     * @param p the template params to inflate this with
+     * @return the secondary text color
+     */
+    public int getSecondaryTextColor(StandardTemplateParams p) {
+        ensureColors(p);
+        return mSecondaryTextColor;
+    }
+
+    private void setTextViewColorSecondary(View contentView, int id,
+                                           StandardTemplateParams p) {
+        ensureColors(p);
+        DrawUtils.setTextColor(contentView, id, mSecondaryTextColor);
+    }
+
+    private void ensureColors(StandardTemplateParams p) {
+        int backgroundColor = getBackgroundColor(p);
+        if (mPrimaryTextColor == COLOR_INVALID
+                || mSecondaryTextColor == COLOR_INVALID
+                || mTextColorsAreForBackground != backgroundColor) {
+            mTextColorsAreForBackground = backgroundColor;
+            if (!hasForegroundColor() || !isColorized(p)) {
+                mPrimaryTextColor = ContrastColorUtil.resolvePrimaryColor(mContext,
+                        backgroundColor, mInNightMode);
+                mSecondaryTextColor = ContrastColorUtil.resolveSecondaryColor(mContext,
+                        backgroundColor, mInNightMode);
+                if (backgroundColor != COLOR_DEFAULT && isColorized(p)) {
+                    mPrimaryTextColor = ContrastColorUtil.findAlphaToMeetContrast(
+                            mPrimaryTextColor, backgroundColor, 4.5);
+                    mSecondaryTextColor = ContrastColorUtil.findAlphaToMeetContrast(
+                            mSecondaryTextColor, backgroundColor, 4.5);
+                }
+            } else {
+                double backLum = calculateLuminance(backgroundColor);
+                double textLum = calculateLuminance(mForegroundColor);
+                double contrast = calculateContrast(mForegroundColor,
+                        backgroundColor);
+                // We only respect the given colors if worst case Black or White still has
+                // contrast
+                boolean backgroundLight = backLum > textLum
+                        && ContrastColorUtil.satisfiesTextContrast(backgroundColor, Color.BLACK)
+                        || backLum <= textLum
+                        && !ContrastColorUtil.satisfiesTextContrast(backgroundColor, Color.WHITE);
+                if (contrast < 4.5f) {
+                    if (backgroundLight) {
+                        mSecondaryTextColor = ContrastColorUtil.findContrastColor(
+                                mForegroundColor,
+                                backgroundColor,
+                                true /* findFG */,
+                                4.5f);
+                        mPrimaryTextColor = ContrastColorUtil.changeColorLightness(
+                                mSecondaryTextColor, -LIGHTNESS_TEXT_DIFFERENCE_LIGHT);
+                    } else {
+                        mSecondaryTextColor =
+                                ContrastColorUtil.findContrastColorAgainstDark(
+                                        mForegroundColor,
+                                        backgroundColor,
+                                        true /* findFG */,
+                                        4.5f);
+                        mPrimaryTextColor = ContrastColorUtil.changeColorLightness(
+                                mSecondaryTextColor, -LIGHTNESS_TEXT_DIFFERENCE_DARK);
+                    }
+                } else {
+                    mPrimaryTextColor = mForegroundColor;
+                    mSecondaryTextColor = ContrastColorUtil.changeColorLightness(
+                            mPrimaryTextColor, backgroundLight ? LIGHTNESS_TEXT_DIFFERENCE_LIGHT
+                                    : LIGHTNESS_TEXT_DIFFERENCE_DARK);
+                    if (calculateContrast(mSecondaryTextColor,
+                            backgroundColor) < 4.5f) {
+                        // oh well the secondary is not good enough
+                        if (backgroundLight) {
+                            mSecondaryTextColor = ContrastColorUtil.findContrastColor(
+                                    mSecondaryTextColor,
+                                    backgroundColor,
+                                    true /* findFG */,
+                                    4.5f);
+                        } else {
+                            mSecondaryTextColor
+                                    = ContrastColorUtil.findContrastColorAgainstDark(
+                                    mSecondaryTextColor,
+                                    backgroundColor,
+                                    true /* findFG */,
+                                    4.5f);
+                        }
+                        mPrimaryTextColor = ContrastColorUtil.changeColorLightness(
+                                mSecondaryTextColor, backgroundLight
+                                        ? -LIGHTNESS_TEXT_DIFFERENCE_LIGHT
+                                        : -LIGHTNESS_TEXT_DIFFERENCE_DARK);
+                    }
+                }
+            }
+        }
+    }
+
+    private void updateBackgroundColor(View contentView,
+                                       StandardTemplateParams p) {
+        if (isColorized(p)) {
+            DrawUtils.setBackgroundColor(contentView, R.id.status_bar_latest_event_content,
+                    getBackgroundColor(p));
+        } else {
+            DrawUtils.setBackgroundResource(contentView, R.id.status_bar_latest_event_content,
+                    0);
+        }
+    }
+
+    private boolean handleProgressBar(View contentView, OpenWatchNotification n,
+                                      StandardTemplateParams p) {
+        /*final int max = ex.getInt(EXTRA_PROGRESS_MAX, 0);
+        final int progress = ex.getInt(EXTRA_PROGRESS, 0);
+        final boolean ind = ex.getBoolean(EXTRA_PROGRESS_INDETERMINATE);
+        if (p.hasProgress && (max != 0 || ind)) {
+            DrawUtils.setViewVisibility(contentView, R.id.progress, View.VISIBLE);
+            contentView.setProgressBar(
+                    R.id.progress, max, progress, ind);
+            contentView.setProgressBackgroundTintList(
+                    R.id.progress, ColorStateList.valueOf(mContext.getColor(
+                            R.color.notification_progress_background_color)));
+            if (getRawColor(p) != COLOR_DEFAULT) {
+                int color = isColorized(p) ? getPrimaryTextColor(p) : resolveContrastColor(p);
+                ColorStateList colorStateList = ColorStateList.valueOf(color);
+                contentView.setProgressTintList(R.id.progress, colorStateList);
+                contentView.setProgressIndeterminateTintList(R.id.progress, colorStateList);
+            }
+            return true;
+        } else {
+            DrawUtils.setViewVisibility(contentView, R.id.progress, View.GONE);
+            return false;
+        }*/return false;
+    }
+
+    private void bindLargeIconAndReply(View contentView, StandardTemplateParams p) {
+        boolean largeIconShown = bindLargeIcon(contentView, p);
+        boolean replyIconShown = bindReplyIcon(contentView, p);
+        boolean iconContainerVisible = largeIconShown || replyIconShown;
+        DrawUtils.setViewVisibility(contentView, R.id.right_icon_container,
+                iconContainerVisible ? View.VISIBLE : View.GONE);
+    }
+
+    /**
+     * Bind the large icon.
+     * @return if the largeIcon is visible
+     */
+    private boolean bindLargeIcon(View contentView, StandardTemplateParams p) {
+        if (mN.getLargeIcon() == null && mN.getLegacyLargeIcon() != null) {
+            mN.setLargeIcon(Icon.createWithBitmap(mN.getLegacyLargeIcon()));
+        }
+        boolean showLargeIcon = mN.getLargeIcon() != null && !p.hideLargeIcon;
+        if (showLargeIcon) {
+            DrawUtils.setViewVisibility(contentView, R.id.right_icon, View.VISIBLE);
+            DrawUtils.setImageViewIcon(contentView, R.id.right_icon, mN.getLargeIcon());
+            processLargeLegacyIcon(mN.getLargeIcon(), contentView, p);
+        }
+        return showLargeIcon;
+    }
+
+    /**
+     * Bind the reply icon.
+     * @return if the reply icon is visible
+     */
+    private boolean bindReplyIcon(View contentView, StandardTemplateParams p) {
+        boolean actionVisible = !p.hideReplyIcon;
+        Notification.Action action = null;
+        if (actionVisible) {
+            action = findReplyAction();
+            actionVisible = action != null;
+        }
+        if (actionVisible) {
+            DrawUtils.setViewVisibility(contentView, R.id.reply_icon_action, View.VISIBLE);
+            DrawUtils.setDrawableTint(contentView, R.id.reply_icon_action,
+                    false /* targetBackground */,
+                    getNeutralColor(p),
+                    PorterDuff.Mode.SRC_ATOP);
+            //contentView.setOnClickPendingIntent(R.id.reply_icon_action, action.actionIntent);
+            //contentView.setRemoteInputs(R.id.reply_icon_action, action.mRemoteInputs);
+        } else {
+            //contentView.setRemoteInputs(R.id.reply_icon_action, null);
+        }
+        DrawUtils.setViewVisibility(contentView, R.id.reply_icon_action,
+                actionVisible ? View.VISIBLE : View.GONE);
+        return actionVisible;
+    }
+
+    private Notification.Action findReplyAction() {
+        ArrayList<Notification.Action> actions = mActions;
+        if (mOriginalActions != null) {
+            actions = mOriginalActions;
+        }
+        int numActions = actions.size();
+        for (int i = 0; i < numActions; i++) {
+            Notification.Action action = actions.get(i);
+            //if (hasValidRemoteInput(action)) {
+            //    return action;
+            //}
+        }
+        return null;
+    }
+
+    private void bindNotificationHeader(View contentView, StandardTemplateParams p) {
+        bindSmallIcon(contentView, p);
+        bindHeaderAppName(contentView, p);
+        bindHeaderText(contentView, p);
+        bindHeaderTextSecondary(contentView, p);
+        bindHeaderChronometerAndTime(contentView, p);
+        bindProfileBadge(contentView, p);
+        bindAlertedIcon(contentView, p);
+        //bindActivePermissions(contentView, p);
+        //bindExpandButton(contentView, p);
+        mN.mUsesStandardHeader = true;
+    }
+
+    private void bindActivePermissions(View contentView, StandardTemplateParams p) {
+        int color = getNeutralColor(p);
+        //DrawUtils.setDrawableTint(contentView, R.id.camera, false, color, PorterDuff.Mode.SRC_ATOP);
+        //DrawUtils.setDrawableTint(contentView, R.id.mic, false, color, PorterDuff.Mode.SRC_ATOP);
+        //DrawUtils.setDrawableTint(contentView, R.id.overlay, false, color, PorterDuff.Mode.SRC_ATOP);
+    }
+
+    private void bindExpandButton(View contentView, StandardTemplateParams p) {
+        int color = isColorized(p) ? getPrimaryTextColor(p) : getSecondaryTextColor(p);
+        /*DrawUtils.setDrawableTint(contentView, R.id.expand_button, false, color,
+                PorterDuff.Mode.SRC_ATOP);
+        contentView.setInt(R.id.notification_header, "setOriginalNotificationColor",
+                color);*/
+    }
+
+    private void bindHeaderChronometerAndTime(View contentView,
+                                              StandardTemplateParams p) {
+        if (showsTimeOrChronometer()) {
+            //DrawUtils.setViewVisibility(contentView, R.id.time_divider, View.VISIBLE);
+            //setTextViewColorSecondary(contentView, R.id.time_divider, p);
+            if (mN.showChronometer()) {
+                DrawUtils.setViewVisibility(contentView, R.id.chronometer, View.VISIBLE);
+                DrawUtils.setBase(contentView, R.id.chronometer, 
+                        mN.getWhen() + (SystemClock.elapsedRealtime() - System.currentTimeMillis()));
+                DrawUtils.setStarted(contentView, R.id.chronometer, true);
+                boolean countsDown = mN.getChronometerCountDown();
+                DrawUtils.setChronometerCountDown(contentView, R.id.chronometer, countsDown);
+                setTextViewColorSecondary(contentView, R.id.chronometer, p);
+            } else {
+                DrawUtils.setViewVisibility(contentView, R.id.time, View.VISIBLE);
+                DrawUtils.setTime(contentView, R.id.time, mN.getWhen());
+                setTextViewColorSecondary(contentView, R.id.time, p);
+            }
+        } else {
+            // We still want a time to be set but gone, such that we can show and hide it
+            // on demand in case it's a child notification without anything in the header
+            DrawUtils.setTime(contentView, R.id.time, mN.getWhen() != 0 ? mN.getWhen() : mN.getCreationTime());
+        }
+    }
+
+    private boolean bindHeaderText(View contentView, StandardTemplateParams p) {
+        CharSequence summaryText = p.summaryText;
+        if (summaryText == null && mStyle != null && mStyle.mSummaryTextSet
+                && mStyle.hasSummaryInHeader()) {
+            summaryText = mStyle.mSummaryText;
+        }
+        if (summaryText == null
+                && mN.getTargetSdkVersion() < Build.VERSION_CODES.N
+                && mN.getInfoText() != null) {
+            summaryText = mN.getInfoText();
+        }
+        if (summaryText != null) {
+            // TODO: Remove the span entirely to only have the string with propper formating.
+            DrawUtils.setTextViewText(contentView, R.id.header_text, processTextSpans(
+                    processLegacyText(summaryText)));
+            setTextViewColorSecondary(contentView, R.id.header_text, p);
+            DrawUtils.setViewVisibility(contentView, R.id.header_text, View.VISIBLE);
+            DrawUtils.setViewVisibility(contentView, R.id.header_text_layout, View.VISIBLE);
+            return true;
+        }
+
+        return false;
+    }
+
+    private void bindHeaderTextSecondary(View contentView, StandardTemplateParams p) {
+        if (!TextUtils.isEmpty(p.headerTextSecondary)) {
+            DrawUtils.setTextViewText(contentView, R.id.header_text_secondary, processTextSpans(
+                    processLegacyText(p.headerTextSecondary)));
+            setTextViewColorSecondary(contentView, R.id.header_text_secondary, p);
+            DrawUtils.setViewVisibility(contentView, R.id.header_text_secondary, View.VISIBLE);
+            Log.d(TAG, "bindHeaderTextSecondary: text = " + p.headerTextSecondary);
+            if (DrawUtils.isVisible(contentView, R.id.header_text)) {
+                DrawUtils.setViewVisibility(contentView, R.id.header_text_divider, View.VISIBLE);
+                setTextViewColorSecondary(contentView, R.id.header_text_divider, p);
+            }
+            DrawUtils.setViewVisibility(contentView, R.id.header_text_layout, View.VISIBLE);
+        }
+    }
+
+    private void bindHeaderAppName(View contentView, StandardTemplateParams p) {
+        DrawUtils.setTextViewText(contentView, R.id.app_name_text, mN.getAppName());
+        if (isColorized(p)) {
+            setTextViewColorPrimary(contentView, R.id.app_name_text, p);
+        } else {
+            DrawUtils.setTextColor(contentView, R.id.app_name_text, getSecondaryTextColor(p));
+        }
+    }
+
+    private boolean isColorized(StandardTemplateParams p) {
+        return p.allowColorization && mN.isColorized();
+    }
+
+    private void bindSmallIcon(View contentView, StandardTemplateParams p) {
+        //if (mN.getSmallIcon() == null && mN.icon != 0) {
+        //    mN.setSmallIcon(Icon.createWithResource(mContext, mN.icon));
+        //}
+        DrawUtils.setImageViewIcon(contentView, R.id.icon, mN.getSmallIcon());
+        DrawUtils.setImageLevel(contentView, R.id.icon, mN.getIconLevel());
+        processSmallIconColor(mN.getSmallIcon(), contentView, p);
+    }
+
+    /**
+     * @return true if the built notification will show the time or the chronometer; false
+     *         otherwise
+     */
+    private boolean showsTimeOrChronometer() {
+        return mN.showsTime() || mN.showsChronometer();
+    }
+
+    private void resetStandardTemplateWithActions(View big) {
+        // actions_container is only reset when there are no actions to avoid focus issues with
+        // remote inputs.
+        DrawUtils.setViewVisibility(big, R.id.actions, View.GONE);
+        //big.removeAllViews(R.id.actions);
+
+        DrawUtils.setViewVisibility(big, R.id.notification_material_reply_container, View.GONE);
+        DrawUtils.setTextViewText(big, R.id.notification_material_reply_text_1, null);
+        DrawUtils.setViewVisibility(big, R.id.notification_material_reply_text_1_container, View.GONE);
+        DrawUtils.setViewVisibility(big, R.id.notification_material_reply_progress, View.GONE);
+
+        DrawUtils.setViewVisibility(big, R.id.notification_material_reply_text_2, View.GONE);
+        DrawUtils.setTextViewText(big, R.id.notification_material_reply_text_2, null);
+        DrawUtils.setViewVisibility(big, R.id.notification_material_reply_text_3, View.GONE);
+        DrawUtils.setTextViewText(big, R.id.notification_material_reply_text_3, null);
+    }
+
+    private View applyStandardTemplateWithActions(int layoutId) {
+        return applyStandardTemplateWithActions(layoutId, mParams.reset().fillTextsFrom(this));
+    }
+
+    private static List<Notification.Action> filterOutContextualActions(
+            List<Notification.Action> actions) {
+        List<Notification.Action> nonContextualActions = new ArrayList<>();
+        for (Notification.Action action : actions) {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !action.isContextual()) {
+                nonContextualActions.add(action);
+            }
+        }
+        return nonContextualActions;
+    }
+
+    private View applyStandardTemplateWithActions(int layoutId,
+                                                         StandardTemplateParams p) {
+        View big = applyStandardTemplate(layoutId, p);
+
+        resetStandardTemplateWithActions(big);
+
+        boolean validRemoteInput = false;
+
+        // In the UI contextual actions appear separately from the standard actions, so we
+        // filter them out here.
+        List<Notification.Action> nonContextualActions = filterOutContextualActions(mActions);
+
+        /*int N = nonContextualActions.size();
+        boolean emphazisedMode = mN.fullScreenIntent != null;
+        big.setBoolean(R.id.actions, "setEmphasizedMode", emphazisedMode);
+        if (N > 0) {
+            DrawUtils.setViewVisibility(big, R.id.actions_container, View.VISIBLE);
+            DrawUtils.setViewVisibility(big, R.id.actions, View.VISIBLE);
+            big.setViewLayoutMarginBottomDimen(R.id.notification_action_list_margin_target, 0);
+            if (N>MAX_ACTION_BUTTONS) N=MAX_ACTION_BUTTONS;
+            for (int i=0; i<N; i++) {
+                Notification.Action action = nonContextualActions.get(i);
+
+                boolean actionHasValidInput = hasValidRemoteInput(action);
+                validRemoteInput |= actionHasValidInput;
+
+                final RemoteViews button = generateActionButton(action, emphazisedMode, p);
+                if (actionHasValidInput && !emphazisedMode) {
+                    // Clear the drawable
+                    button.setInt(R.id.action0, "setBackgroundResource", 0);
+                }
+                big.addView(R.id.actions, button);
+            }
+        } else {
+            DrawUtils.setViewVisibility(big, R.id.actions_container, View.GONE);
+        }
+
+        CharSequence[] replyText = mN.extras.getCharSequenceArray(EXTRA_REMOTE_INPUT_HISTORY);
+        if (validRemoteInput && replyText != null
+                && replyText.length > 0 && !TextUtils.isEmpty(replyText[0])
+                && p.maxRemoteInputHistory > 0) {
+            boolean showSpinner = mN.extras.getBoolean(EXTRA_SHOW_REMOTE_INPUT_SPINNER);
+            DrawUtils.setViewVisibility(big, R.id.notification_material_reply_container, View.VISIBLE);
+            DrawUtils.setViewVisibility(big, R.id.notification_material_reply_text_1_container,
+                    View.VISIBLE);
+            DrawUtils.setTextViewText(big, R.id.notification_material_reply_text_1,
+                    processTextSpans(replyText[0]));
+            setTextViewColorSecondary(big, R.id.notification_material_reply_text_1, p);
+            DrawUtils.setViewVisibility(big, R.id.notification_material_reply_progress,
+                    showSpinner ? View.VISIBLE : View.GONE);
+            big.setProgressIndeterminateTintList(
+                    R.id.notification_material_reply_progress,
+                    ColorStateList.valueOf(
+                            isColorized(p) ? getPrimaryTextColor(p) : resolveContrastColor(p)));
+
+            if (replyText.length > 1 && !TextUtils.isEmpty(replyText[1])
+                    && p.maxRemoteInputHistory > 1) {
+                DrawUtils.setViewVisibility(big, R.id.notification_material_reply_text_2, View.VISIBLE);
+                DrawUtils.setTextViewText(big, R.id.notification_material_reply_text_2,
+                        processTextSpans(replyText[1]));
+                setTextViewColorSecondary(big, R.id.notification_material_reply_text_2, p);
+
+                if (replyText.length > 2 && !TextUtils.isEmpty(replyText[2])
+                        && p.maxRemoteInputHistory > 2) {
+                    DrawUtils.setViewVisibility(big, 
+                            R.id.notification_material_reply_text_3, View.VISIBLE);
+                    DrawUtils.setTextViewText(big, R.id.notification_material_reply_text_3,
+                            processTextSpans(replyText[2]));
+                    setTextViewColorSecondary(big, R.id.notification_material_reply_text_3, p);
+                }
+            }
+        }*/
+
+        return big;
+    }
+
+    private boolean hasValidRemoteInput(Notification.Action action) {
+        if (TextUtils.isEmpty(action.title) || action.actionIntent == null) {
+            // Weird actions
+            return false;
+        }
+
+        RemoteInput[] remoteInputs = action.getRemoteInputs();
+        if (remoteInputs == null) {
+            return false;
+        }
+
+        for (RemoteInput r : remoteInputs) {
+            CharSequence[] choices = r.getChoices();
+            if (r.getAllowFreeFormInput() || (choices != null && choices.length != 0)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public View createContentView() {
@@ -111,6 +752,15 @@ public class NotiDrawer {
         }
     }
 
+    /**
+     * Adapt the Notification header if this view is used as an expanded view.
+     */
+    public static void makeHeaderExpanded(View result) {
+        if (result != null) {
+            //result.setBoolean(R.id.notification_header, "setExpanded", true);
+        }
+    }
+
     private CharSequence createSummaryText() {
         CharSequence titleText = mN.getTitle();
         SpannableStringBuilder summary = new SpannableStringBuilder();
@@ -131,95 +781,141 @@ public class NotiDrawer {
         return summary;
     }
 
-    private void sanitizeColor() {
-        if (mN.getColor() != COLOR_DEFAULT) {
-            mN.setColor(mN.getColor() | 0xFF000000); // no alpha for custom colors
+    /*private View generateActionButton(Notification.Action action, boolean emphazisedMode,
+                                      StandardTemplateParams p) {
+        final boolean tombstone = (action.actionIntent == null);
+        View button = new BuilderView(mContext.getApplicationInfo(),
+                emphazisedMode ? getEmphasizedActionLayoutResource()
+                        : tombstone ? getActionTombstoneLayoutResource()
+                        : getActionLayoutResource());
+        if (!tombstone) {
+            button.setOnClickPendingIntent(R.id.action0, action.actionIntent);
         }
-    }
-
-    private View applyStandardTemplate(int resId) {
-        return applyStandardTemplate(resId, mParams.reset().fillTextsFrom(this));
-    }
-
-    private View applyStandardTemplate(int resId, StandardTemplateParams p) {
-        View contentView = LayoutInflater.from(mContext).inflate(resId, null);
-
-        resetStandardTemplate(contentView);
-
-        updateBackgroundColor(contentView, p);
-        bindNotificationHeader(contentView, p);
-        bindLargeIconAndReply(contentView, p);
-        if (p.title != null) {
-            TextView t = contentView.findViewById(R.id.title);
-            t.setVisibility(View.VISIBLE);
-            t.setText(p.title);
-            //t.setTextColor(mN.getTitleColor());
+        button.setContentDescription(R.id.action0, action.title);
+        if (action.mRemoteInputs != null) {
+            button.setRemoteInputs(R.id.action0, action.mRemoteInputs);
         }
-        if (p.text != null) {
-            TextView t = contentView.findViewById(R.id.text);
-            t.setText(p.text);
-            t.setTextColor(Color.WHITE);
-            //t.setTextColor(mN.getTextColor());
-            t.setVisibility(View.VISIBLE);
-        }
-
-        return contentView;
-    }
-    
-    /**
-     * Resets the notification header to its original state
-     */
-    private void resetNotificationHeader(View contentView) {
-        // Small icon doesn't need to be reset, as it's always set. Resetting would prevent
-        // re-using the drawable when the notification is updated.
-        TextView ant = contentView.findViewById(R.id.app_name_text);
-        ant.setText(null);
-        contentView.findViewById(R.id.chronometer).setVisibility(View.GONE);
-        contentView.findViewById(R.id.chronometer).setVisibility(View.GONE);
-        contentView.findViewById(R.id.header_text_layout).setVisibility(View.GONE);
-        TextView ht = contentView.findViewById(R.id.header_text);
-        ht.setVisibility(View.GONE);
-        ht.setText(null);
-        TextView hts = contentView.findViewById(R.id.header_text_secondary);
-        hts.setVisibility(View.GONE);
-        hts.setText(null);
-        contentView.findViewById(R.id.header_text_divider).setVisibility(View.GONE);
-        contentView.findViewById(R.id.time).setVisibility(View.GONE);
-        ImageView pb = contentView.findViewById(R.id.profile_badge);
-        pb.setImageIcon(null);
-        contentView.findViewById(R.id.profile_badge).setVisibility(View.GONE);
-        //contentView.findViewById(R.id.alerted_icon).setVisibility(View.GONE);
-        mUsesStandardHeader = false;
-    }
-
-    private void resetStandardTemplate(View contentView) {
-        resetNotificationHeader(contentView);
-        contentView.findViewById(R.id.right_icon).setVisibility(View.GONE);
-        contentView.findViewById(R.id.title).setVisibility(View.GONE);
-        TextView t = contentView.findViewById(R.id.title);
-        t.setText(null);
-        contentView.findViewById(R.id.text).setVisibility(View.GONE);
-        TextView te = contentView.findViewById(R.id.text);
-        te.setText(null);
-        contentView.findViewById(R.id.text_line_1).setVisibility(View.GONE);
-        TextView tl1 = contentView.findViewById(R.id.text_line_1);
-        tl1.setText(null);
-    }
-
-    private void updateBackgroundColor(View contentView, StandardTemplateParams p) {
-        if (isColorized(p)) {
-            //contentView.findViewById(R.id.status_bar_latest_event_content).setBackgroundColor(getBackgroundColor(p));
+        if (emphazisedMode) {
+            // change the background bgColor
+            CharSequence title = action.title;
+            ColorStateList[] outResultColor = null;
+            int background = resolveBackgroundColor(p);
+            if (isLegacy()) {
+                title = ContrastColorUtil.clearColorSpans(title);
+            } else {
+                outResultColor = new ColorStateList[1];
+                title = ensureColorSpanContrast(title, background, outResultColor);
+            }
+            button.setTextViewText(R.id.action0, processTextSpans(title));
+            setTextViewColorPrimary(button, R.id.action0, p);
+            int rippleColor;
+            boolean hasColorOverride = outResultColor != null && outResultColor[0] != null;
+            if (hasColorOverride) {
+                // There's a span spanning the full text, let's take it and use it as the
+                // background color
+                background = outResultColor[0].getDefaultColor();
+                int textColor = ContrastColorUtil.resolvePrimaryColor(mContext,
+                        background, mInNightMode);
+                button.setTextColor(R.id.action0, textColor);
+                rippleColor = textColor;
+            } else if (getRawColor(p) != COLOR_DEFAULT && !isColorized(p)
+                    && mTintActionButtons && !mInNightMode) {
+                rippleColor = resolveContrastColor(p);
+                button.setTextColor(R.id.action0, rippleColor);
+            } else {
+                rippleColor = getPrimaryTextColor(p);
+            }
+            // We only want about 20% alpha for the ripple
+            rippleColor = (rippleColor & 0x00ffffff) | 0x33000000;
+            button.setColorStateList(R.id.action0, "setRippleColor",
+                    ColorStateList.valueOf(rippleColor));
+            button.setColorStateList(R.id.action0, "setButtonBackground",
+                    ColorStateList.valueOf(background));
+            button.setBoolean(R.id.action0, "setHasStroke", !hasColorOverride);
         } else {
-            contentView.findViewById(R.id.status_bar_latest_event_content).setBackgroundResource(0);
+            button.setTextViewText(R.id.action0, processTextSpans(
+                    processLegacyText(action.title)));
+            if (isColorized(p)) {
+                setTextViewColorPrimary(button, R.id.action0, p);
+            } else if (getRawColor(p) != COLOR_DEFAULT && mTintActionButtons) {
+                button.setTextColor(R.id.action0, resolveContrastColor(p));
+            }
         }
-    }
+        button.setIntTag(R.id.action0, R.id.notification_action_index_tag,
+                mActions.indexOf(action));
+        return button;
+    }*/
 
-    private void bindSmallIcon(View contentView, StandardTemplateParams p) {
-        ImageView i = contentView.findViewById(R.id.icon);
-        i.setImageIcon(mN.getSmallIcon());
-        i.setImageLevel(mN.getIconLevel());
-        processSmallIconColor(mN.getSmallIcon(), contentView, p);
-    }
+    /*/**
+     * Ensures contrast on color spans against a background color. also returns the color of the
+     * text if a span was found that spans over the whole text.
+     *
+     * @param charSequence the charSequence on which the spans are
+     * @param background the background color to ensure the contrast against
+     * @param outResultColor an array in which a color will be returned as the first element if
+     *                    there exists a full length color span.
+     * @return the contrasted charSequence
+     */
+    /*private CharSequence ensureColorSpanContrast(CharSequence charSequence, int background,
+                                                 ColorStateList[] outResultColor) {
+        if (charSequence instanceof Spanned) {
+            Spanned ss = (Spanned) charSequence;
+            Object[] spans = ss.getSpans(0, ss.length(), Object.class);
+            SpannableStringBuilder builder = new SpannableStringBuilder(ss.toString());
+            for (Object span : spans) {
+                Object resultSpan = span;
+                int spanStart = ss.getSpanStart(span);
+                int spanEnd = ss.getSpanEnd(span);
+                boolean fullLength = (spanEnd - spanStart) == charSequence.length();
+                if (resultSpan instanceof CharacterStyle) {
+                    resultSpan = ((CharacterStyle) span).getUnderlying();
+                }
+                if (resultSpan instanceof TextAppearanceSpan) {
+                    TextAppearanceSpan originalSpan = (TextAppearanceSpan) resultSpan;
+                    ColorStateList textColor = originalSpan.getTextColor();
+                    if (textColor != null) {
+                        int[] colors = textColor.getColors();
+                        int[] newColors = new int[colors.length];
+                        for (int i = 0; i < newColors.length; i++) {
+                            newColors[i] = ContrastColorUtil.ensureLargeTextContrast(
+                                    colors[i], background, mInNightMode);
+                        }
+                        textColor = new ColorStateList(textColor.getStates().clone(),
+                                newColors);
+                        if (fullLength) {
+                            outResultColor[0] = textColor;
+                            // Let's drop the color from the span
+                            textColor = null;
+                        }
+                        resultSpan = new TextAppearanceSpan(
+                                originalSpan.getFamily(),
+                                originalSpan.getTextStyle(),
+                                originalSpan.getTextSize(),
+                                textColor,
+                                originalSpan.getLinkTextColor());
+                    }
+                } else if (resultSpan instanceof ForegroundColorSpan) {
+                    ForegroundColorSpan originalSpan = (ForegroundColorSpan) resultSpan;
+                    int foregroundColor = originalSpan.getForegroundColor();
+                    foregroundColor = ContrastColorUtil.ensureLargeTextContrast(
+                            foregroundColor, background, mInNightMode);
+                    if (fullLength) {
+                        outResultColor[0] = ColorStateList.valueOf(foregroundColor);
+                        resultSpan = null;
+                    } else {
+                        resultSpan = new ForegroundColorSpan(foregroundColor);
+                    }
+                } else {
+                    resultSpan = span;
+                }
+                if (resultSpan != null) {
+                    builder.setSpan(resultSpan, spanStart, spanEnd, ss.getSpanFlags(span));
+                }
+            }
+            return builder;
+        }
+        return charSequence;
+    }*/
 
     /**
      * @return Whether we are currently building a notification from a legacy (an app that
@@ -259,138 +955,153 @@ public class NotiDrawer {
         nhv.setOriginalIconColor(colorable ? color : NotificationHeaderView.NO_COLOR);
     }
 
-    private boolean isColorized(StandardTemplateParams p) {
-        return false;
+    /*/**
+     * Make the largeIcon dark if it's a fake smallIcon (that is,
+     * if it's grayscale).
+     */
+    /*// TODO: also check bounds, transparency, that sort of thing.
+    private void processLargeLegacyIcon(Icon largeIcon, View contentView,
+                                        StandardTemplateParams p) {
+        if (largeIcon != null && isLegacy()
+                && getColorUtil().isGrayscaleIcon(mContext, largeIcon)) {
+            // resolve color will fall back to the default when legacy
+            DrawUtils.setDrawableTint(contentView, R.id.icon, false, resolveContrastColor(p),
+                    PorterDuff.Mode.SRC_ATOP);
+        }
+    }*/
+
+    private void sanitizeColor() {
+        if (mN.getColor() != COLOR_DEFAULT) {
+            mN.setColor(mN.getColor() | 0xFF000000); // no alpha for custom colors
+        }
     }
 
-    private void bindNotificationHeader(View contentView, StandardTemplateParams p) {
-        bindSmallIcon(contentView, p);
-        bindHeaderAppName(contentView, p);
-        boolean headerTextVisible = bindHeaderText(contentView, p);
-        bindHeaderTextSecondary(contentView, p, headerTextVisible);
-        bindHeaderChronometerAndTime(contentView, p);
-        bindProfileBadge(contentView, p);
-        //bindAlertedIcon(contentView, p);
-        mUsesStandardHeader = true;
+    int resolveNeutralColor() {
+        if (mNeutralColor != COLOR_INVALID) {
+            return mNeutralColor;
+        }
+        int background = mContext.getColor(
+                R.color.notification_material_background_color);
+        mNeutralColor = ContrastColorUtil.resolveDefaultColor(mContext, background,
+                mInNightMode);
+        if (Color.alpha(mNeutralColor) < 255) {
+            // alpha doesn't go well for color filters, so let's blend it manually
+            mNeutralColor = compositeColors(mNeutralColor, background);
+        }
+        return mNeutralColor;
     }
 
-    private void bindHeaderAppName(View contentView, StandardTemplateParams p) {
-        TextView ant = contentView.findViewById(R.id.app_name_text);
-        ant.setText(mN.getAppName());
+    /*int resolveContrastColor(StandardTemplateParams p) {
+        int rawColor = getRawColor(p);
+        if (mCachedContrastColorIsFor == rawColor && mCachedContrastColor != COLOR_INVALID) {
+            return mCachedContrastColor;
+        }
+
+        int color;
+        int background = mContext.getColor(
+                com.android.internal.R.color.notification_material_background_color);
+        if (rawColor == COLOR_DEFAULT) {
+            ensureColors(p);
+            color = ContrastColorUtil.resolveDefaultColor(mContext, background, mInNightMode);
+        } else {
+            color = ContrastColorUtil.resolveContrastColor(mContext, rawColor,
+                    background, mInNightMode);
+        }
+        if (Color.alpha(color) < 255) {
+            // alpha doesn't go well for color filters, so let's blend it manually
+            color = ContrastColorUtil.compositeColors(color, background);
+        }
+        mCachedContrastColorIsFor = rawColor;
+        return mCachedContrastColor = color;
+    }*/
+
+    /**
+     * Return the raw color of this Notification, which doesn't necessarily satisfy contrast.
+     *
+     * @see #resolveContrastColor(StandardTemplateParams) for the contrasted color
+     * @param p the template params to inflate this with
+     */
+    private int getRawColor(StandardTemplateParams p) {
+        if (p.forceDefaultColor) {
+            return COLOR_DEFAULT;
+        }
+        return mN.getColor();
+    }
+
+    /*int resolveNeutralColor() {
+        if (mNeutralColor != COLOR_INVALID) {
+            return mNeutralColor;
+        }
+        int background = mContext.getColor(
+                com.android.internal.R.color.notification_material_background_color);
+        mNeutralColor = ContrastColorUtil.resolveDefaultColor(mContext, background,
+                mInNightMode);
+        if (Color.alpha(mNeutralColor) < 255) {
+            // alpha doesn't go well for color filters, so let's blend it manually
+            mNeutralColor = ContrastColorUtil.compositeColors(mNeutralColor, background);
+        }
+        return mNeutralColor;
+    }*/
+
+    private int getBackgroundColor(StandardTemplateParams p) {
         if (isColorized(p)) {
-            //setTextViewColorPrimary(ant, p);
+            return mBackgroundColor != COLOR_INVALID ? mBackgroundColor : getRawColor(p);
         } else {
-            //ant.setTextColor(getSecondaryTextColor(p));
-        }
-        //ant.setTextColor(mN.getAppNameTextColor());
-    }
-
-    private boolean bindHeaderText(View contentView, StandardTemplateParams p) {
-        boolean visible = false;
-        CharSequence summaryText = p.summaryText;
-        if (summaryText == null && mStyle != null && mStyle.mSummaryTextSet
-                && mStyle.hasSummaryInHeader()) {
-            summaryText = mStyle.mSummaryText;
-        }
-        if (summaryText == null
-                && mN.getTargetSdkVersion() < Build.VERSION_CODES.N
-                && mN.getInfoText() != null) {
-            summaryText = mN.getInfoText();
-        }
-        if (summaryText != null) {
-            // TODO: Remove the span entirely to only have the string with propper formating.
-            TextView ht = contentView.findViewById(R.id.header_text);
-            ht.setText(summaryText);
-            //setTextViewColorSecondary(ht, p);
-            ht.setVisibility(View.VISIBLE);
-            visible = true;
-            contentView.findViewById(R.id.header_text_layout).setVisibility(View.VISIBLE);
-        }
-        return visible;
-    }
-
-    private void bindHeaderTextSecondary(View contentView, StandardTemplateParams p, boolean headerTextVisible) {
-        if (!TextUtils.isEmpty(p.headerTextSecondary)) {
-            TextView hts = contentView.findViewById(R.id.header_text_secondary);
-            hts.setText(p.headerTextSecondary);
-            //setTextViewColorSecondary(hts, p);
-            hts.setVisibility(View.VISIBLE);
-            if (headerTextVisible) {
-                TextView htsd = contentView.findViewById(R.id.header_text_divider);
-                htsd.setVisibility(View.VISIBLE);
-                //setTextViewColorSecondary(htsd, p);
-            }
-            contentView.findViewById(R.id.header_text_layout).setVisibility(View.VISIBLE);
-        }
-    }
-
-    private void bindHeaderChronometerAndTime(View contentView, StandardTemplateParams p) {
-        if (showsTimeOrChronometer()) {
-            if (mN.showChronometer()) {
-                Chronometer c = contentView.findViewById(R.id.chronometer);
-                c.setVisibility(View.VISIBLE);
-                c.setBase(mN.getChronometerBase());
-                c.start();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                    c.setCountDown(mN.getChronometerCountDown());
-                }
-                //setTextViewColorSecondary(c, p);
-            } else {
-                DateTimeView t = contentView.findViewById(R.id.time);
-                t.setVisibility(View.VISIBLE);
-                t.setTime(mN.getWhen());
-                //setTextViewColorSecondary(t, p);
-            }
-        } else {
-            // We still want a time to be set but gone, such that we can show and hide it
-            // on demand in case it's a child notification without anything in the header
-            DateTimeView t = contentView.findViewById(R.id.time);
-            t.setTime(mN.getWhen() != 0 ? mN.getWhen() : mN.getCreationTime());
-        }
-    }
-
-    private void bindProfileBadge(View contentView, StandardTemplateParams p) {
-        Bitmap profileBadge = mN.getProfileBadge();
-
-        if (profileBadge != null) {
-            ImageView pb = contentView.findViewById(R.id.profile_badge);
-            pb.setImageBitmap(profileBadge);
-            pb.setVisibility(View.VISIBLE);
-            if (isColorized(p)) {
-                //pb.setColorFilter(getPrimaryTextColor(p), PorterDuff.Mode.SRC_ATOP);
-            }
+            return COLOR_DEFAULT;
         }
     }
 
     /**
-     * @return true if the built notification will show the time or the chronometer; false
-     *         otherwise
+     * Gets a neutral color that can be used for icons or similar that should not stand out.
+     * @param p the template params to inflate this with
      */
-    private boolean showsTimeOrChronometer() {
-        return mN.showsTime() || mN.showsChronometer();
-    }
-
-    private void bindLargeIconAndReply(View contentView, StandardTemplateParams p) {
-        boolean largeIconShown = bindLargeIcon(contentView, p);
-        boolean replyIconShown = bindReplyIcon(contentView, p, largeIconShown);
-        boolean iconContainerVisible = largeIconShown || replyIconShown;
-        //contentView.findViewById(R.id.right_icon_container)
-        //        .setVisibility(iconContainerVisible ? View.VISIBLE : View.GONE);
+    private int getNeutralColor(StandardTemplateParams p) {
+        if (isColorized(p)) {
+            return getSecondaryTextColor(p);
+        } else {
+            return resolveNeutralColor();
+        }
     }
 
     /**
-     * Bind the large icon.
-     * @return if the largeIcon is visible
+     * Same as getBackgroundColor but also resolved the default color to the background.
+     * @param p the template params to inflate this with
      */
-    private boolean bindLargeIcon(View contentView, StandardTemplateParams p) {
-        boolean showLargeIcon = mN.getLargeIcon() != null && !p.hideLargeIcon;
-        if (showLargeIcon) {
-            ImageView ri = contentView.findViewById(R.id.right_icon);
-            ri.setVisibility(View.VISIBLE);
-            ri.setImageIcon(mN.getLargeIcon());
-            processLargeLegacyIcon(mN.getLargeIcon(), contentView, p);
+    private int resolveBackgroundColor(StandardTemplateParams p) {
+        int backgroundColor = getBackgroundColor(p);
+        if (backgroundColor == COLOR_DEFAULT) {
+            backgroundColor = mContext.getColor(
+                    R.color.notification_material_background_color);
         }
-        return showLargeIcon;
+        return backgroundColor;
+    }
+
+    private boolean shouldTintActionButtons() {
+        return mTintActionButtons;
+    }
+
+    private boolean textColorsNeedInversion() {
+        if (mStyle == null || !MediaStyle.class.equals(mStyle.getClass())) {
+            return false;
+        }
+        int targetSdkVersion = mN.getTargetSdkVersion();
+        return targetSdkVersion > Build.VERSION_CODES.M
+                && targetSdkVersion < Build.VERSION_CODES.O;
+    }
+
+    /**
+     * Set a color palette to be used as the background and textColors
+     *
+     * @param backgroundColor the color to be used as the background
+     * @param foregroundColor the color to be used as the foreground
+     *
+     * @hide
+     */
+    public void setColorPalette(int backgroundColor, int foregroundColor) {
+        mBackgroundColor = backgroundColor;
+        mForegroundColor = foregroundColor;
+        mTextColorsAreForBackground = COLOR_INVALID;
+        ensureColors(mParams.reset().fillTextsFrom(this));
     }
 
     /**
@@ -455,150 +1166,6 @@ public class NotiDrawer {
         //contentView.findViewById(R.id.separator).setVisibility(largeIconShown && actionVisible ? View.VISIBLE : View.GONE);
         //ria.setVisibility(actionVisible ? View.VISIBLE : View.GONE);
         return actionVisible;
-    }
-
-    /**
-     * Gets a neutral color that can be used for icons or similar that should not stand out.
-     * @param p the template params to inflate this with
-     */
-    private int getNeutralColor(StandardTemplateParams p) {
-        if (isColorized(p)) {
-            //return getSecondaryTextColor(p);
-        } else {
-            //return resolveNeutralColor();
-        }
-
-        return 0;
-    }
-
-    private boolean shouldTintActionButtons() {
-        return mTintActionButtons;
-    }
-
-    private boolean textColorsNeedInversion() {
-        if (mStyle == null || !Notification.MediaStyle.class.equals(mStyle.getClass())) {
-            return false;
-        }
-        int targetSdkVersion = mN.getTargetSdkVersion();
-        return targetSdkVersion > Build.VERSION_CODES.M
-                && targetSdkVersion < Build.VERSION_CODES.O;
-    }
-
-    private Notification.Action findReplyAction() {
-        /*ArrayList<Notification.Action> actions = mActions;
-        if (mOriginalActions != null) {
-            actions = mOriginalActions;
-        }
-        int numActions = actions.size();
-        for (int i = 0; i < numActions; i++) {
-            Notification.Action action = actions.get(i);
-            if (hasValidRemoteInput(action)) {
-                return action;
-            }
-        }*/ // TODO: FIX THIS
-        return null;
-    }
-
-    private View applyStandardTemplateWithActions(int layoutId) {
-        return applyStandardTemplateWithActions(layoutId, mParams.reset().fillTextsFrom(this));
-    }
-
-    private void resetStandardTemplateWithActions(View big) {
-        // actions_container is only reset when there are no actions to avoid focus issues with
-        // remote inputs.
-
-        //ViewGroup a = big.findViewById(R.id.actions);
-        //a.setVisibility(View.GONE);
-        //a.removeAllViews();
-
-        //big.findViewById(R.id.notification_material_reply_container).setVisibility(View.GONE);
-        //LinearLayout nmrt1c = big.findViewById(R.id.notification_material_reply_text_1_container);
-        //TextView nmrt1 = big.findViewById(R.id.notification_material_reply_text_1);
-        //nmrt1.setText(null);
-        //nmrt1c.setVisibility(View.GONE);
-        //big.findViewById(R.id.notification_material_reply_progress).setVisibility(View.GONE);
-
-        //big.findViewById(R.id.notification_material_reply_text_2).setVisibility(View.GONE);
-        //TextView nmrt2 = big.findViewById(R.id.notification_material_reply_text_2);
-        //nmrt2.setText(null);
-        //big.findViewById(R.id.notification_material_reply_text_3).setVisibility(View.GONE);
-        //TextView nmrt3 = big.findViewById(R.id.notification_material_reply_text_3);
-        //nmrt3.setText(null);
-
-        //big.setViewLayoutMarginBottomDimen(R.id.notification_action_list_margin_target,
-        //        R.dimen.notification_content_margin);
-    }
-
-    private View applyStandardTemplateWithActions(int layoutId, StandardTemplateParams p) {
-        View big = applyStandardTemplate(layoutId, p);
-
-        resetStandardTemplateWithActions(big);
-
-        boolean validRemoteInput = false;
-
-        /*// In the UI contextual actions appear separately from the standard actions, so we
-        // filter them out here.
-        List<Notification.Action> nonContextualActions = filterOutContextualActions(mActions);
-
-        int N = nonContextualActions.size();
-        boolean emphazisedMode = mN.fullScreenIntent != null;
-        big.setBoolean(R.id.actions, "setEmphasizedMode", emphazisedMode);
-        if (N > 0) {
-            big.setViewVisibility(R.id.actions_container, View.VISIBLE);
-            big.setViewVisibility(R.id.actions, View.VISIBLE);
-            big.setViewLayoutMarginBottomDimen(R.id.notification_action_list_margin_target, 0);
-            if (N>MAX_ACTION_BUTTONS) N=MAX_ACTION_BUTTONS;
-            for (int i=0; i<N; i++) {
-                Action action = nonContextualActions.get(i);
-
-                boolean actionHasValidInput = hasValidRemoteInput(action);
-                validRemoteInput |= actionHasValidInput;
-
-                final View button = generateActionButton(action, emphazisedMode, p);
-                if (actionHasValidInput && !emphazisedMode) {
-                    // Clear the drawable
-                    button.setInt(R.id.action0, "setBackgroundResource", 0);
-                }
-                big.addView(R.id.actions, button);
-            }
-        } else {
-            big.setViewVisibility(R.id.actions_container, View.GONE);
-        }*/
-
-        CharSequence[] replyText = mN.getRemoteInputHistory();
-        if (validRemoteInput && replyText != null
-                && replyText.length > 0 && !TextUtils.isEmpty(replyText[0])
-                && p.maxRemoteInputHistory > 0) {
-            boolean showSpinner = mN.getShowRemoteInputSpinner();
-            big.findViewById(R.id.notification_material_reply_container).setVisibility(View.VISIBLE);
-            big.findViewById(R.id.notification_material_reply_text_1_container).setVisibility(View.VISIBLE);
-            TextView nmrt1 = big.findViewById(R.id.notification_material_reply_text_1);
-            nmrt1.setText(replyText[0]);
-            //setTextViewColorSecondary(nmrt1, p);
-            big.findViewById(R.id.notification_material_reply_progress)
-                    .setVisibility(showSpinner ? View.VISIBLE : View.GONE);
-            ProgressBar nmrp = big.findViewById(R.id.notification_material_reply_progress);
-            //nmrp.setIndeterminateTintList(ColorStateList.valueOf(
-            //        isColorized(p) ? getPrimaryTextColor(p) : resolveContrastColor(p)));
-
-            if (replyText.length > 1 && !TextUtils.isEmpty(replyText[1])
-                    && p.maxRemoteInputHistory > 1) {
-                TextView nmrt2 = big.findViewById(R.id.notification_material_reply_text_2);
-                nmrt2.setVisibility(View.VISIBLE);
-                nmrt2.setText(replyText[1]);
-                //setTextViewColorSecondary(nmrt2, p);
-
-                if (replyText.length > 2 && !TextUtils.isEmpty(replyText[2])
-                        && p.maxRemoteInputHistory > 2) {
-                    TextView nmrt3 = big.findViewById(R.id.notification_material_reply_text_3);
-                    nmrt3.setVisibility(View.VISIBLE);
-                    nmrt3.setText(replyText[2]);
-                    //setTextViewColorSecondary(nmrt3, p);
-                }
-            }
-        }
-
-        return big;
     }
 
     /**
@@ -982,13 +1549,13 @@ public class NotiDrawer {
                 //if (i < actionCount) {
                 //    bindMediaActionButton(big, MEDIA_BUTTON_IDS[i], mNotiDrawer.mActions.get(i), p);
                 //} else {
-                //    big.setViewVisibility(MEDIA_BUTTON_IDS[i], View.GONE);
+                //    DrawUtils.setViewVisibility(big, MEDIA_BUTTON_IDS[i], View.GONE);
                 //}
             }
             //bindMediaActionButton(big, R.id.media_seamless, new Notification.Action(R.drawable.ic_media_seamless,
             //        mNotiDrawer.mContext.getString(
             //                R.string.ext_media_seamless_action), null), p);
-            //big.setViewVisibility(R.id.media_seamless, View.GONE);
+            //DrawUtils.setViewVisibility(big, R.id.media_seamless, View.GONE);
             handleImage(big);
             return big;
         }
@@ -1096,6 +1663,128 @@ public class NotiDrawer {
         public StandardTemplateParams setMaxRemoteInputHistory(int maxRemoteInputHistory) {
             this.maxRemoteInputHistory = maxRemoteInputHistory;
             return this;
+        }
+    }
+
+    private static class DrawUtils {
+        public static void setViewVisibility(View root, @IdRes int id, int visibility) {
+            View view = root.findViewById(id);
+            if (view == null) return;
+            
+            view.setVisibility(visibility);
+        }
+        
+        public static void setDrawableTint(View root, @IdRes int id, boolean targetBackground,
+                                           int colorFilter, PorterDuff.Mode mode) {
+            View view = root.findViewById(id);
+            if (view == null) return;
+
+            // Pick the correct drawable to modify for this view
+            Drawable targetDrawable = null;
+            if (targetBackground) {
+                targetDrawable = view.getBackground();
+            } else if (view instanceof ImageView) {
+                ImageView imageView = (ImageView) view;
+                targetDrawable = imageView.getDrawable();
+            }
+
+            if (targetDrawable != null) {
+                targetDrawable.mutate().setColorFilter(colorFilter, mode);
+            }
+        }
+        
+        public static void setBase(View root, @IdRes int id, long base) {
+            Chronometer view = root.findViewById(id);
+            if (view == null) return;
+            
+            view.setBase(base);
+        }
+        
+        public static void setStarted(View root, @IdRes int id, boolean started) {
+            Chronometer view = root.findViewById(id);
+            if (view == null) return;
+            
+            if (started)
+                view.start();
+            else
+                view.stop();
+        }
+
+        public static void setChronometerCountDown(View root, @IdRes int id, boolean countDown) {
+            Chronometer view = root.findViewById(id);
+            if (view == null) return;
+
+            view.setCountDown(countDown);
+        }
+
+        public static void setTime(View root, @IdRes int id, long time) {
+            DateTimeView view = root.findViewById(id);
+            if (view == null) return;
+
+            view.setTime(time);
+        }
+        
+        public static void setTextViewText(View root, @IdRes int id, CharSequence text) {
+            Log.d(TAG, "setTextViewText: text = " + text);
+            TextView view = root.findViewById(id);
+            if (view == null) return;
+            
+            view.setText(text);
+        }
+        
+        public static void setImageViewBitmap(View root, @IdRes int id, Bitmap bitmap) {
+            ImageView view = root.findViewById(id);
+            if (view == null) return;
+
+            view.setImageBitmap(bitmap);
+        }
+
+        public static void setImageViewIcon(View root, @IdRes int id, Icon icon) {
+            ImageView view = root.findViewById(id);
+            if (view == null) return;
+
+            view.setImageIcon(icon);
+        }
+
+        public static void setExpanded(View root, @IdRes int id, boolean expanded) {
+            NotificationHeaderView view = root.findViewById(id);
+            if (view == null) return;
+
+            //view.setExpanded(expanded);
+        }
+
+        public static void setTextColor(View root, @IdRes int id, int color) {
+            TextView view = root.findViewById(id);
+            if (view == null) return;
+
+            //view.setTextColor(color);
+        }
+
+        public static void setBackgroundColor(View root, @IdRes int id, int color) {
+            View view = root.findViewById(id);
+            if (view == null) return;
+
+            view.setBackgroundColor(color);
+        }
+
+        public static void setBackgroundResource(View root, @IdRes int id, int resource) {
+            View view = root.findViewById(id);
+            if (view == null) return;
+
+            view.setBackgroundResource(resource);
+        }
+
+        public static void setImageLevel(View root, @IdRes int id, int level) {
+            ImageView view = root.findViewById(id);
+            if (view == null) return;
+
+            view.setImageLevel(level);
+        }
+
+        public static boolean isVisible(View root, @IdRes int id) {
+            View view = root.findViewById(id);
+
+            return view != null && view.getVisibility() == View.VISIBLE;
         }
     }
 }

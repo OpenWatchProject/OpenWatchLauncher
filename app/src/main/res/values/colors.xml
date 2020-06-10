@@ -10,9 +10,8 @@
 
     <drawable name="notification_template_divider">#29000000</drawable>
 
-    <color name="notification_secondary_text_color_light">
-        @color/primary_text_default_material_light
-    </color>
+    <color name="notification_secondary_text_color_light">@color/primary_text_default_material_light</color>
+    <color name="notification_secondary_text_color_dark">#61ffffff</color>
 
     <color name="indicator_unselected">#4D000000</color>
     <color name="black_trans80">#33000000</color>
@@ -20,4 +19,7 @@
 
     <color name="notification_default_color_dark">#de000000</color>
     <color name="notification_default_color_light">#a3202124</color>
+    <color name="notification_material_background_color">#fffafafa</color>
+    <color name="notification_primary_text_color_light">#de000000</color>
+    <color name="notification_primary_text_color_dark">#ffffffff</color>
 </resources>
