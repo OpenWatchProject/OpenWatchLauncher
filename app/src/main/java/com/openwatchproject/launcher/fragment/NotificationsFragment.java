@@ -24,7 +24,6 @@ import com.openwatchproject.launcher.notification.OpenWatchNotification;
 
 public class NotificationsFragment extends Fragment {
     private static final String TAG = "NotificationsFragment";
-    private FragmentNotificationsBinding binding;
 
     private NotificationHelper notificationHelper;
 
@@ -44,7 +43,7 @@ public class NotificationsFragment extends Fragment {
         public void onNotificationPosted(OpenWatchNotification own) {
             Log.d(TAG, "onNotificationPosted");
 
-            notificationsAdapter.addNotification(own);
+            notificationsAdapter.notifyDataSetChanged();
             setNotificationVisibility(notificationsAdapter.getItemCount() != 0);
         }
 
@@ -52,7 +51,7 @@ public class NotificationsFragment extends Fragment {
         public void onNotificationRemoved(OpenWatchNotification own) {
             Log.d(TAG, "onNotificationRemoved");
 
-            notificationsAdapter.removeNotification(own);
+            notificationsAdapter.notifyDataSetChanged();
             setNotificationVisibility(notificationsAdapter.getItemCount() != 0);
         }
 
@@ -63,14 +62,11 @@ public class NotificationsFragment extends Fragment {
     };
 
     @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-    }
-
-    @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        binding = FragmentNotificationsBinding.inflate(inflater, container, false);
+        FragmentNotificationsBinding binding = FragmentNotificationsBinding.inflate(inflater, container, false);
+        noNotificationsText = binding.noNotificationsText;
+        notificationsRecyclerView = binding.notificationsRecyclerView;
         return binding.getRoot();
     }
 
@@ -78,13 +74,11 @@ public class NotificationsFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        noNotificationsText = binding.noNotificationsText;
-        notificationsRecyclerView = binding.notificationsRecyclerView;
         notificationsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         new LinearSnapHelper().attachToRecyclerView(notificationsRecyclerView);
 
-        notificationsAdapter = new NotificationAdapter(callback);
         notificationsRecyclerView.setAdapter(notificationsAdapter);
+        setNotificationVisibility(notificationsAdapter.getItemCount() != 0);
     }
 
     private void setNotificationVisibility(boolean visible) {
@@ -98,19 +92,17 @@ public class NotificationsFragment extends Fragment {
     }
 
     @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        notificationHelper.removeNotificationListener(listener);
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        notificationHelper = ((OpenWatchLauncher) getActivity().getApplication()).getNotificationHelper();
+        notificationsAdapter = new NotificationAdapter(callback, notificationHelper.getPostedNotifications());
+        notificationHelper.addNotificationListener(listener);
     }
 
     @Override
-    public void onActivityCreated(@Nullable Bundle savedInstanceState) {
-        super.onActivityCreated(savedInstanceState);
-
-        notificationHelper = ((OpenWatchLauncher) getActivity().getApplication()).getNotificationHelper();
-        notificationsAdapter.setNotifications(notificationHelper.getPostedNotifications());
-        notificationHelper.addNotificationListener(listener);
-        setNotificationVisibility(notificationsAdapter.getItemCount() != 0);
+    public void onDestroy() {
+        super.onDestroy();
+        notificationHelper.removeNotificationListener(listener);
     }
 
     public interface NotificationCallback {

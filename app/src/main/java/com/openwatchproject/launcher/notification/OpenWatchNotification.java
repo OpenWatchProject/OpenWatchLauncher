@@ -9,6 +9,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
+import android.view.View;
 
 import androidx.annotation.Nullable;
 
@@ -111,6 +112,8 @@ public class OpenWatchNotification {
     private StatusBarNotification sbn;
     private Context c;
     private boolean isPhoneNotification = false;
+
+    private View view;
 
     public OpenWatchNotification(Context c, StatusBarNotification sbn) {
         this.sbn = sbn;
@@ -368,7 +371,15 @@ public class OpenWatchNotification {
     }
 
     public MediaSession.Token getMediaSession() {
-        return null;
+        return mediaSession;
+    }
+
+    public View getView(Context context) {
+        if (view == null) {
+            view = new NotiDrawer(context, this).createContentView();
+        }
+
+        return view;
     }
 
     /**
@@ -475,7 +486,7 @@ public class OpenWatchNotification {
             OpenWatchNotification own1 = this;
             StatusBarNotification own2 = (StatusBarNotification) obj;
 
-            if (own1.getTag() != null && own2.getTag() != null && own1.getTag().equals(own2.getTag())) return true;
+            if (own1.getTag() != null && own1.getTag().equals(own2.getTag())) return true;
             if (!(own1.getId() == own2.getId())) return false;
             if (!(own1.getPackageName().equals(own2.getPackageName()))) return false;
 

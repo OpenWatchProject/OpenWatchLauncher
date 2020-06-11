@@ -3,11 +3,14 @@ package com.openwatchproject.launcher.notification;
 import android.content.Context;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
+import android.util.Log;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class NotificationHelper {
+    private static final String TAG = "NotificationHelper";
+
     private NLService nlService;
     private final List<OpenWatchNotification> postedNotifications;
     private NotificationListenerService.RankingMap rankingMap;
@@ -52,7 +55,20 @@ public class NotificationHelper {
     public void addNotification(Context c, StatusBarNotification sbn) {
         OpenWatchNotification own = new OpenWatchNotification(c, sbn);
         if (!filter(own)) {
-            postedNotifications.add(own);
+            boolean added = false;
+            for (int i = 0; i < postedNotifications.size(); i++) {
+                if (postedNotifications.get(i).equals(own)) {
+                    Log.d(TAG, "Replacing existing notification for " + own.getPackageName());
+                    postedNotifications.set(i, own);
+                    added = true;
+                    break;
+                }
+            }
+
+            if (!added) {
+                Log.d(TAG, "addNotification: Adding new notification for " + own.getPackageName());
+                postedNotifications.add(own);
+            }
 
             for (NotificationListener listener : listeners) {
                 listener.onNotificationPosted(own);
