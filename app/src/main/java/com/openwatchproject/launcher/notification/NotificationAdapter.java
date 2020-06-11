@@ -27,8 +27,7 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         FrameLayout frameLayout = new FrameLayout(parent.getContext());
-        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT);
-        frameLayout.setLayoutParams(layoutParams);
+        frameLayout.setLayoutParams(new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));
         return new ViewHolder(frameLayout);
     }
 
@@ -65,11 +64,11 @@ public class NotificationAdapter extends RecyclerView.Adapter<NotificationAdapte
 
     private static void adjustInset(View v) {
         Resources res = v.getContext().getResources();
-        //if (res.getConfiguration().isScreenRound()) {
-        DisplayMetrics dm = res.getDisplayMetrics();
-        int p1 = (int) (0.146467f * Math.min(dm.widthPixels, dm.heightPixels));
-        int p2 = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, res.getDisplayMetrics());
-        v.setPadding(p1, p2, p1, p1);
-        //}
+        if (res.getConfiguration().isScreenRound()) {
+            DisplayMetrics dm = res.getDisplayMetrics();
+            int p1 = (int) (0.146467f * Math.min(dm.widthPixels, dm.heightPixels));
+            int p2 = (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8, res.getDisplayMetrics());
+            v.setPadding(p1, p2, p1, p1);
+        }
     }
 }

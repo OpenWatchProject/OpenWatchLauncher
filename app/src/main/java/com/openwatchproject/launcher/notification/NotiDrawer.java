@@ -174,6 +174,7 @@ public class NotiDrawer {
         DrawUtils.setViewVisibility(contentView, R.id.right_icon, View.GONE);
         DrawUtils.setViewVisibility(contentView, R.id.title, View.GONE);
         DrawUtils.setTextViewText(contentView, R.id.title, null);
+        DrawUtils.setSelected(contentView, R.id.title, true);
         DrawUtils.setViewVisibility(contentView, R.id.text, View.GONE);
         DrawUtils.setTextViewText(contentView, R.id.text, null);
         DrawUtils.setViewVisibility(contentView, R.id.text_line_1, View.GONE);
@@ -401,7 +402,7 @@ public class NotiDrawer {
 
     private void bindLargeIconAndReply(View contentView, StandardTemplateParams p) {
         boolean largeIconShown = bindLargeIcon(contentView, p);
-        boolean replyIconShown = bindReplyIcon(contentView, p);
+        boolean replyIconShown = bindReplyIcon(contentView, p, largeIconShown);
         boolean iconContainerVisible = largeIconShown || replyIconShown;
         DrawUtils.setViewVisibility(contentView, R.id.right_icon_container,
                 iconContainerVisible ? View.VISIBLE : View.GONE);
@@ -428,7 +429,7 @@ public class NotiDrawer {
      * Bind the reply icon.
      * @return if the reply icon is visible
      */
-    private boolean bindReplyIcon(View contentView, StandardTemplateParams p) {
+    private boolean bindReplyIcon(View contentView, StandardTemplateParams p, boolean largeIconShown) {
         boolean actionVisible = !p.hideReplyIcon;
         Notification.Action action = null;
         if (actionVisible) {
@@ -446,6 +447,8 @@ public class NotiDrawer {
         } else {
             //contentView.setRemoteInputs(R.id.reply_icon_action, null);
         }
+        DrawUtils.setViewVisibility(contentView, R.id.separator,
+                largeIconShown && actionVisible ? View.VISIBLE : View.GONE);
         DrawUtils.setViewVisibility(contentView, R.id.reply_icon_action,
                 actionVisible ? View.VISIBLE : View.GONE);
         return actionVisible;
@@ -1141,30 +1144,6 @@ public class NotiDrawer {
     }
 
     /**
-     * Bind the reply icon.
-     * @return if the reply icon is visible
-     */
-    private boolean bindReplyIcon(View contentView, StandardTemplateParams p, boolean largeIconShown) {
-        boolean actionVisible = !p.hideReplyIcon;
-        Notification.Action action = null;
-        if (actionVisible) {
-            action = findReplyAction();
-            actionVisible = action != null;
-        }
-        ImageView ria = contentView.findViewById(R.id.reply_icon_action);
-        if (actionVisible) {
-            ria.setColorFilter(getNeutralColor(p), PorterDuff.Mode.SRC_ATOP);
-            //contentView.setOnClickPendingIntent(R.id.reply_icon_action, action.actionIntent);
-            //contentView.setRemoteInputs(R.id.reply_icon_action, action.mRemoteInputs);
-        } else {
-            //contentView.setRemoteInputs(R.id.reply_icon_action, null);
-        }
-        //contentView.findViewById(R.id.separator).setVisibility(largeIconShown && actionVisible ? View.VISIBLE : View.GONE);
-        //ria.setVisibility(actionVisible ? View.VISIBLE : View.GONE);
-        return actionVisible;
-    }
-
-    /**
      * An object that can apply a rich notification style to a {@link Notification.Builder}
      * object.
      */
@@ -1780,6 +1759,13 @@ public class NotiDrawer {
             View view = root.findViewById(id);
 
             return view != null && view.getVisibility() == View.VISIBLE;
+        }
+
+        public static void setSelected(View root, @IdRes int id, boolean selected) {
+            View view = root.findViewById(id);
+            if (view == null) return;
+
+            view.setSelected(selected);
         }
     }
 }

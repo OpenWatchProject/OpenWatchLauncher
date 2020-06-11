@@ -181,8 +181,18 @@ public class OpenWatchNotification {
         // TODO: Do something with this
         //Notification.Builder b = Notification.Builder.recoverBuilder(c, sbn.getNotification());
 
+        fixWiiteStuff();
+
         Log.d(TAG, "OpenWatchNotification: " + tag + ", " + packageName + ", " + id);
         Log.d(TAG, "OpenWatchNotification: " + toString());
+    }
+
+    private void fixWiiteStuff() {
+        if (packageName.equals("android") && title.isEmpty() && text.contains(",Tap")) {
+            String[] splitted = text.split(",");
+            title = splitted[0];
+            text = splitted[1];
+        }
     }
 
     public OpenWatchNotification(StatusBarNotification sbn) {
@@ -376,6 +386,7 @@ public class OpenWatchNotification {
 
     public View getView(Context context) {
         if (view == null) {
+            Log.d(TAG, "Drawing " + getPackageName() + ", " + sbn.getNotification().extras);
             view = new NotiDrawer(context, this).createContentView();
         }
 

@@ -20,8 +20,6 @@
     android:layout_height="wrap_content"
     android:layout_marginTop="@dimen/notification_text_margin_top"
     android:ellipsize="marquee"
-    android:singleLine="false"
     android:textAlignment="center"
-    android:textColor="@color/notification_secondary_text_color_light"
     android:textSize="@dimen/notification_text_size"
     tools:viewBindingIgnore="true" />
