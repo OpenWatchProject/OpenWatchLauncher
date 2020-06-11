@@ -1,5 +1,6 @@
 package com.openwatchproject.launcher.notification;
 
+import android.content.Context;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 
@@ -8,15 +9,13 @@ import java.util.List;
 
 public class NotificationHelper {
     private NLService nlService;
-    private final List<StatusBarNotification> postedNotifications;
-    private final List<StatusBarNotification> removedNotifications;
+    private final List<OpenWatchNotification> postedNotifications;
     private NotificationListenerService.RankingMap rankingMap;
     private final List<NotificationListener> listeners;
 
     public NotificationHelper() {
         nlService = null;
         this.postedNotifications = new ArrayList<>();
-        this.removedNotifications = new ArrayList<>();
         this.listeners = new ArrayList<>();
     }
 
@@ -30,47 +29,48 @@ public class NotificationHelper {
 
     public void clearAll() {
         postedNotifications.clear();
-        removedNotifications.clear();
     }
 
-    public void setNotifications(StatusBarNotification[] sbns) {
+    public void setNotifications(Context c, StatusBarNotification[] sbns) {
+        // Clear the list of posted notifications
         postedNotifications.clear();
 
+        // Add all the notifications
         for (StatusBarNotification sbn : sbns) {
-            if (filterNotification(sbn)) {
-                addNotification(sbn);
-            }
+            addNotification(c, sbn);
         }
-
-        List<StatusBarNotification> toRemove = new ArrayList<>();
-        for (StatusBarNotification sbn : removedNotifications) {
-            if (!postedNotifications.contains(sbn)) {
-                toRemove.add(sbn);
-            }
-        }
-        removedNotifications.remove(toRemove);
     }
 
     public void setRankingMap(NotificationListenerService.RankingMap rankingMap) {
         this.rankingMap = rankingMap;
 
+        for (NotificationListener listener : listeners) {
+            listener.onNotificationRankingUpdated(rankingMap);
+        }
     }
 
-    public void addNotification(StatusBarNotification sbn) {
+    public void addNotification(Context c, StatusBarNotification sbn) {
+        OpenWatchNotification own = new OpenWatchNotification(c, sbn);
+        if (!filter(own)) {
+            postedNotifications.add(own);
 
-        postedNotifications.add(sbn);
-
-        for (NotificationListener listener : listeners)
-            listener.onNotificationPosted(sbn);
+            for (NotificationListener listener : listeners) {
+                listener.onNotificationPosted(own);
+            }
+        }
     }
 
-    public void dismissNotification(StatusBarNotification sbn) {
-        removedNotifications.add(sbn);
+    private boolean filter(OpenWatchNotification own) {
+        return false;
     }
 
     public void removeNotification(StatusBarNotification sbn) {
-        postedNotifications.remove(sbn);
-        removedNotifications.remove(sbn);
+        OpenWatchNotification own = new OpenWatchNotification(sbn);
+        postedNotifications.remove(own);
+
+        for (NotificationListener listener : listeners) {
+            listener.onNotificationRemoved(own);
+        }
     }
 
     public void addNotificationListener(NotificationListener listener) {
@@ -81,17 +81,13 @@ public class NotificationHelper {
         listeners.remove(listener);
     }
 
-    private boolean filterNotification(StatusBarNotification sbn) {
-        return true;
-    }
-
-    public List<StatusBarNotification> getPostedNotifications() {
+    public List<OpenWatchNotification> getPostedNotifications() {
         return postedNotifications;
     }
 
     public interface NotificationListener {
-        void onNotificationPosted(StatusBarNotification sbn);
-        void onNotificationRemoved(StatusBarNotification sbn);
+        void onNotificationPosted(OpenWatchNotification own);
+        void onNotificationRemoved(OpenWatchNotification own);
         void onNotificationRankingUpdated(NotificationListenerService.RankingMap rankingMap);
     }
 }

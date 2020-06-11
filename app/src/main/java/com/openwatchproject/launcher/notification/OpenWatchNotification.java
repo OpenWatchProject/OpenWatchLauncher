@@ -10,9 +10,9 @@ import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
 import android.util.Log;
 
-import com.openwatchproject.launcher.Utils;
+import androidx.annotation.Nullable;
 
-import java.util.Arrays;
+import com.openwatchproject.launcher.Utils;
 
 import static android.app.Notification.EXTRA_BIG_TEXT;
 import static android.app.Notification.EXTRA_CHRONOMETER_COUNT_DOWN;
@@ -37,7 +37,7 @@ import static android.app.Notification.EXTRA_TITLE_BIG;
 import static com.openwatchproject.launcher.Utils.getApplicationName;
 
 public class OpenWatchNotification {
-    private static final String TAG = "PhoneNotification";
+    private static final String TAG = "OpenWatchNotification";
 
     /**
      * Maximum number of (generic) action buttons in a notification (contextual action buttons are
@@ -178,7 +178,24 @@ public class OpenWatchNotification {
         // TODO: Do something with this
         //Notification.Builder b = Notification.Builder.recoverBuilder(c, sbn.getNotification());
 
+        Log.d(TAG, "OpenWatchNotification: " + tag + ", " + packageName + ", " + id);
         Log.d(TAG, "OpenWatchNotification: " + toString());
+    }
+
+    public OpenWatchNotification(StatusBarNotification sbn) {
+        this.sbn = sbn;
+
+        // StatusBarNotification data
+        this.groupKey = sbn.getGroupKey();
+        this.id = sbn.getId();
+        this.key = sbn.getKey();
+        this.overrideGroupKey = sbn.getOverrideGroupKey();
+        this.packageName = sbn.getPackageName();
+        this.postTime = sbn.getPostTime();
+        this.tag = sbn.getTag();
+        this.isClearable = sbn.isClearable();
+        this.isGroup = sbn.isGroup();
+        this.isOngoing = sbn.isOngoing();
     }
 
     private static String[] csaToStringArrayOrNull(CharSequence[] csa) {
@@ -202,9 +219,9 @@ public class OpenWatchNotification {
         return appName;
     }
 
-    public String getId() {
-        return packageName + ":" + id;
-    }
+    public int getId() {
+        return id;
+}
 
     public Notification.Action[] getActions() {
         return actions;
@@ -316,6 +333,10 @@ public class OpenWatchNotification {
 
     public boolean showChronometer() {
         return showChronometer;
+    }
+
+    public String getPackageName() {
+        return packageName;
     }
 
     public int getIconLevel() {
@@ -440,62 +461,36 @@ public class OpenWatchNotification {
     }
 
     @Override
-    public String toString() {
-        return "OpenWatchNotification{" +
-                "appName='" + appName + '\'' +
-                ", chronometerBase=" + chronometerBase +
-                ", profileBadge=" + profileBadge +
-                ", groupKey='" + groupKey + '\'' +
-                ", id=" + id +
-                ", key='" + key + '\'' +
-                ", overrideGroupKey='" + overrideGroupKey + '\'' +
-                ", packageName='" + packageName + '\'' +
-                ", postTime=" + postTime +
-                ", tag='" + tag + '\'' +
-                ", isClearable=" + isClearable +
-                ", isGroup=" + isGroup +
-                ", isOngoing=" + isOngoing +
-                ", actions=" + Arrays.toString(actions) +
-                ", category='" + category + '\'' +
-                ", color=" + color +
-                ", flags=" + flags +
-                ", number=" + number +
-                ", tickerText='" + tickerText + '\'' +
-                ", visibility=" + visibility +
-                ", when=" + when +
-                ", group='" + group + '\'' +
-                ", largeIcon=" + largeIcon +
-                ", largeIconLegacy=" + largeIconLegacy +
-                ", smallIcon=" + smallIcon +
-                ", sortKey='" + sortKey + '\'' +
-                ", iconLevel=" + iconLevel +
-                ", bigText='" + bigText + '\'' +
-                ", chronometerCountDown=" + chronometerCountDown +
-                ", compactActions=" + Arrays.toString(compactActions) +
-                ", conversationTitle='" + conversationTitle + '\'' +
-                ", infoText='" + infoText + '\'' +
-                ", largeIconBig=" + largeIconBig +
-                ", messages=" + Arrays.toString(messages) +
-                ", picture=" + picture +
-                ", progress=" + progress +
-                ", progressIndeterminate=" + progressIndeterminate +
-                ", progressMax=" + progressMax +
-                ", showChronometer=" + showChronometer +
-                ", showWhen=" + showWhen +
-                ", subText='" + subText + '\'' +
-                ", summaryText='" + summaryText + '\'' +
-                ", template='" + template + '\'' +
-                ", text='" + text + '\'' +
-                ", textLines=" + Arrays.toString(textLines) +
-                ", title='" + title + '\'' +
-                ", titleBig='" + titleBig + '\'' +
-                ", targetSdkVersion=" + targetSdkVersion +
-                ", mediaSession=" + mediaSession +
-                ", colorized=" + colorized +
-                ", mUsesStandardHeader=" + mUsesStandardHeader +
-                ", sbn=" + sbn +
-                ", c=" + c +
-                ", isPhoneNotification=" + isPhoneNotification +
-                '}';
+    public boolean equals(@Nullable Object obj) {
+        if (obj instanceof OpenWatchNotification) {
+            OpenWatchNotification own1 = this;
+            OpenWatchNotification own2 = (OpenWatchNotification) obj;
+
+            if (own1.getTag() != null && own2.getTag() != null && own1.getTag().equals(own2.getTag())) return true;
+            if (!(own1.getId() == own2.getId())) return false;
+            if (!(own1.getPackageName().equals(own2.getPackageName()))) return false;
+
+            return true;
+        } else if (obj instanceof StatusBarNotification) {
+            OpenWatchNotification own1 = this;
+            StatusBarNotification own2 = (StatusBarNotification) obj;
+
+            if (own1.getTag() != null && own2.getTag() != null && own1.getTag().equals(own2.getTag())) return true;
+            if (!(own1.getId() == own2.getId())) return false;
+            if (!(own1.getPackageName().equals(own2.getPackageName()))) return false;
+
+            return true;
+        }
+
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        if (getTag() != null) {
+            return tag.hashCode() + id + packageName.hashCode();
+        }
+
+        return id + packageName.hashCode();
     }
 }

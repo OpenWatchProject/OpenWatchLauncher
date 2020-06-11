@@ -26,13 +26,9 @@ import android.view.View;
 import android.widget.Chronometer;
 import android.widget.ImageButton;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
-import android.widget.RemoteViews;
 import android.widget.TextView;
 
-import androidx.annotation.ColorInt;
 import androidx.annotation.IdRes;
-import androidx.appcompat.widget.DrawableUtils;
 import androidx.core.text.BidiFormatter;
 
 import com.openwatchproject.launcher.R;
@@ -1725,7 +1721,6 @@ public class NotiDrawer {
         }
         
         public static void setTextViewText(View root, @IdRes int id, CharSequence text) {
-            Log.d(TAG, "setTextViewText: text = " + text);
             TextView view = root.findViewById(id);
             if (view == null) return;
             

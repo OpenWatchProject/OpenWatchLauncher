@@ -35,7 +35,10 @@
 
         <include layout="@layout/notification_template_part_line1" />
 
-        <include layout="@layout/notification_template_text" />
+        <include
+            layout="@layout/notification_template_text"
+            android:ellipsize="marquee"
+            android:maxLines="1" />
 
         <include layout="@layout/notification_template_progress"
             android:layout_width="match_parent"

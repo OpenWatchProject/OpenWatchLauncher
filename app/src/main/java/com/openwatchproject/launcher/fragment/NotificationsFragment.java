@@ -12,12 +12,15 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.LinearSnapHelper;
+import androidx.recyclerview.widget.RecyclerView;
 
 import com.openwatchproject.launcher.notification.NotificationHelper;
 import com.openwatchproject.launcher.OpenWatchLauncher;
-import com.openwatchproject.launcher.notification.NotificationViewPagerAdapter;
+import com.openwatchproject.launcher.notification.NotificationAdapter;
 import com.openwatchproject.launcher.databinding.FragmentNotificationsBinding;
-import com.openwatchproject.launcher.view.VerticalViewPager;
+import com.openwatchproject.launcher.notification.OpenWatchNotification;
 
 public class NotificationsFragment extends Fragment {
     private static final String TAG = "NotificationsFragment";
@@ -26,8 +29,8 @@ public class NotificationsFragment extends Fragment {
     private NotificationHelper notificationHelper;
 
     private TextView noNotificationsText;
-    private VerticalViewPager notificationsViewPager;
-    private NotificationViewPagerAdapter notificationsAdapter;
+    private RecyclerView notificationsRecyclerView;
+    private NotificationAdapter notificationsAdapter;
 
     private NotificationCallback callback = new NotificationCallback() {
         @Override
@@ -38,19 +41,19 @@ public class NotificationsFragment extends Fragment {
 
     private NotificationHelper.NotificationListener listener = new NotificationHelper.NotificationListener() {
         @Override
-        public void onNotificationPosted(StatusBarNotification sbn) {
+        public void onNotificationPosted(OpenWatchNotification own) {
             Log.d(TAG, "onNotificationPosted");
 
-            notificationsAdapter.addNotification(sbn);
-            setNotificationVisibility(notificationsAdapter.getCount() != 0);
+            notificationsAdapter.addNotification(own);
+            setNotificationVisibility(notificationsAdapter.getItemCount() != 0);
         }
 
         @Override
-        public void onNotificationRemoved(StatusBarNotification sbn) {
+        public void onNotificationRemoved(OpenWatchNotification own) {
             Log.d(TAG, "onNotificationRemoved");
 
-            notificationsAdapter.removeNotification(sbn);
-            setNotificationVisibility(notificationsAdapter.getCount() != 0);
+            notificationsAdapter.removeNotification(own);
+            setNotificationVisibility(notificationsAdapter.getItemCount() != 0);
         }
 
         @Override
@@ -76,18 +79,20 @@ public class NotificationsFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         noNotificationsText = binding.noNotificationsText;
-        notificationsViewPager = binding.notificationsViewPager;
+        notificationsRecyclerView = binding.notificationsRecyclerView;
+        notificationsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
+        new LinearSnapHelper().attachToRecyclerView(notificationsRecyclerView);
 
-        notificationsAdapter = new NotificationViewPagerAdapter(callback);
-        notificationsViewPager.setAdapter(notificationsAdapter);
+        notificationsAdapter = new NotificationAdapter(callback);
+        notificationsRecyclerView.setAdapter(notificationsAdapter);
     }
 
     private void setNotificationVisibility(boolean visible) {
         if (visible) {
-            notificationsViewPager.setVisibility(View.VISIBLE);
+            notificationsRecyclerView.setVisibility(View.VISIBLE);
             noNotificationsText.setVisibility(View.GONE);
         } else {
-            notificationsViewPager.setVisibility(View.GONE);
+            notificationsRecyclerView.setVisibility(View.GONE);
             noNotificationsText.setVisibility(View.VISIBLE);
         }
     }
@@ -105,7 +110,7 @@ public class NotificationsFragment extends Fragment {
         notificationHelper = ((OpenWatchLauncher) getActivity().getApplication()).getNotificationHelper();
         notificationsAdapter.setNotifications(notificationHelper.getPostedNotifications());
         notificationHelper.addNotificationListener(listener);
-        setNotificationVisibility(notificationsAdapter.getCount() != 0);
+        setNotificationVisibility(notificationsAdapter.getItemCount() != 0);
     }
 
     public interface NotificationCallback {

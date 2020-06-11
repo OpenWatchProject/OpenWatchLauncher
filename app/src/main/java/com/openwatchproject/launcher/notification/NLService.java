@@ -16,26 +16,12 @@ public class NLService extends NotificationListenerService {
         super.onNotificationPosted(sbn, rankingMap);
 
         Log.d(TAG, "Posted notification from " + sbn.getPackageName());
-        notificationHelper.addNotification(sbn);
+        notificationHelper.addNotification(getApplicationContext(), sbn);
     }
 
     @Override
     public void onNotificationRemoved(StatusBarNotification sbn) {
         super.onNotificationRemoved(sbn);
-
-        Log.d(TAG, "onNotificationRemoved 1");
-    }
-
-    @Override
-    public void onNotificationRemoved(StatusBarNotification sbn, RankingMap rankingMap) {
-        super.onNotificationRemoved(sbn, rankingMap);
-
-        Log.d(TAG, "onNotificationRemoved 2");
-    }
-
-    @Override
-    public void onNotificationRemoved(StatusBarNotification sbn, RankingMap rankingMap, int reason) {
-        super.onNotificationRemoved(sbn, rankingMap, reason);
 
         Log.d(TAG, "Removed notification from " + sbn.getPackageName());
         notificationHelper.removeNotification(sbn);
@@ -56,7 +42,7 @@ public class NLService extends NotificationListenerService {
         Log.d(TAG, "Listener connected");
         notificationHelper = ((OpenWatchLauncher) getApplication()).getNotificationHelper();
         notificationHelper.setNlService(this);
-        notificationHelper.setNotifications(getActiveNotifications());
+        notificationHelper.setNotifications(getApplicationContext(), getActiveNotifications());
     }
 
     @Override
