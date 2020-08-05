@@ -14,27 +14,18 @@
   ~ limitations under the License
   -->
 
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/status_bar_latest_event_content"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="#00000000"
+    android:orientation="vertical"
     android:tag="media"
     tools:viewBindingIgnore="true">
 
-    <ImageView
-        android:id="@+id/right_icon"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:layout_gravity="top|end"
-        android:adjustViewBounds="true"
-        android:scaleType="centerCrop" />
-
     <include
-        layout="@layout/notification_template_header"
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/media_notification_header_height" />
+        layout="@layout/notification_template_header" />
 
     <LinearLayout
         android:id="@+id/notification_main_column"
@@ -42,7 +33,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/notification_content_margin_start"
         android:layout_marginTop="@dimen/notification_content_margin_top"
-        android:orientation="horizontal"
+        android:orientation="vertical"
         android:tag="media">
 
         <LinearLayout
@@ -72,4 +63,13 @@
             <!-- media buttons will be added here -->
         </LinearLayout>
     </LinearLayout>
-</FrameLayout>
+
+    <ImageView
+        android:id="@+id/right_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="match_parent"
+        android:layout_gravity="top|end"
+        android:adjustViewBounds="true"
+        android:scaleType="centerCrop" />
+
+</LinearLayout>

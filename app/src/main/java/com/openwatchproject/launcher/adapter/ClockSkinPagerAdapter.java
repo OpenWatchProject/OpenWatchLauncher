@@ -96,7 +96,7 @@ public class ClockSkinPagerAdapter extends PagerAdapter {
     public int getItemPosition(@NonNull Object object) {
         for (int i = 0; i < watchFace.size(); i++) {
             OpenWatchWatchFaceFile owwf = watchFace.get(i);
-            if (owwf.getFile().getAbsolutePath().equals(object)) {
+            if (owwf.getFile().getUri().equals(object)) {
                 return i;
             }
         }

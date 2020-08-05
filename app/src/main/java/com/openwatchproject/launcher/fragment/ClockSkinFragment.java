@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.graphics.Point;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.service.wallpaper.WallpaperService;
@@ -62,21 +63,21 @@ public class ClockSkinFragment extends Fragment {
             return true;
         });
 
-        loadWatchFace();
+        //loadWatchFace();
     }
 
     @Override
     public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         if (requestCode == REQUEST_CODE_CHOOSE_CLOCK_SKIN) {
             if (resultCode == Activity.RESULT_OK) {
-                String watchFacePath = data.getStringExtra(ClockSkinChooserActivity.RESULT_WATCH_FACE_PATH);
+                Uri watchFacePath = data.getData();
                 Log.d(TAG, "Selected clockskin: " + watchFacePath);
 
                 SharedPreferences.Editor sharedPrefsEditor = getContext().getSharedPreferences(ClockSkinFragment.class.getName(), Context.MODE_PRIVATE).edit();
-                sharedPrefsEditor.putString("lastWatchFace", watchFacePath);
+                sharedPrefsEditor.putString("lastWatchFace", watchFacePath.toString());
                 sharedPrefsEditor.apply();
 
-                OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(watchFacePath);
+                OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(getContext(), watchFacePath);
                 clockSkinView.setWatchFace(watchFaceFile.getWatchFace(getResources()));
                 watchFaceFile.close();
             } else {
@@ -101,13 +102,13 @@ public class ClockSkinFragment extends Fragment {
         return wearWatchFaces;
     }
 
-    public void loadWatchFace() {
+    /*public void loadWatchFace() {
         SharedPreferences sharedPrefs = getContext().getSharedPreferences(ClockSkinFragment.class.getName(), Context.MODE_PRIVATE);
         String lastWatchFace = sharedPrefs.getString("lastWatchFace", null);
         if (lastWatchFace != null) {
             File f = new File(lastWatchFace);
             if (f.exists()) {
-                OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(new File(lastWatchFace));
+                OpenWatchWatchFaceFile watchFaceFile = new OpenWatchWatchFaceFile(getContext(), Uri.parse(lastWatchFace));
                 clockSkinView.setWatchFace(watchFaceFile.getWatchFace(getResources()));
                 watchFaceFile.close();
                 return;
@@ -126,5 +127,5 @@ public class ClockSkinFragment extends Fragment {
         }
 
         Toast.makeText(getContext(), "No valid ClockSkin was found.", Toast.LENGTH_LONG).show();
-    }
+    }*/
 }

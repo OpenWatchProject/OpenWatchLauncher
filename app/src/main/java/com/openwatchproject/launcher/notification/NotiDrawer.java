@@ -141,7 +141,7 @@ public class NotiDrawer {
 
                     break;
                 case "android.app.Notification$MediaStyle":
-                    //mStyle = new MediaStyle(this);
+                    mStyle = new MediaStyle(this);
                     break;
             }
         }
@@ -1403,8 +1403,8 @@ public class NotiDrawer {
         public MediaStyle(NotiDrawer notiDrawer) {
             super(notiDrawer);
 
-            //mToken = extras.getParcelable(EXTRA_MEDIA_SESSION);
-            //mActionsToShowInCompact = extras.getIntArray(EXTRA_COMPACT_ACTIONS);
+            mToken = notiDrawer.mN.getMediaSession();
+            mActionsToShowInCompact = notiDrawer.mN.getCompactActions();
         }
         
         @Override
@@ -1482,14 +1482,14 @@ public class NotiDrawer {
             //            "setShowActionsInCompactView: action %d out of bounds (max %d)",
             //            numActions, numActions - 1));
             //}
-            for (int i = 0; i < MAX_MEDIA_BUTTONS_IN_COMPACT; i++) {
-                //if (i < numActionsToShow) {
-                //    final Notification.Action action = mNotiDrawer.mActions.get(mActionsToShowInCompact[i]);
-                //    bindMediaActionButton(view, MEDIA_BUTTON_IDS[i], action, p);
-                //} else {
-                //    view.findViewById(MEDIA_BUTTON_IDS[i]).setVisibility(View.GONE);
-                //}
-            }
+            //for (int i = 0; i < MAX_MEDIA_BUTTONS_IN_COMPACT; i++) {
+            //    if (i < numActionsToShow) {
+            //        final Notification.Action action = mNotiDrawer.mActions.get(mActionsToShowInCompact[i]);
+            //        bindMediaActionButton(view, MEDIA_BUTTON_IDS[i], action, p);
+            //    } else {
+            //        view.findViewById(MEDIA_BUTTON_IDS[i]).setVisibility(View.GONE);
+            //    }
+            //}
             handleImage(view);
             // handle the content margin
             int endMargin = R.dimen.notification_content_margin_end;
