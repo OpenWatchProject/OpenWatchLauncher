@@ -42,7 +42,7 @@ public class ClockSkinChooserActivity extends OpenWatchActivity {
         setContentView(binding.getRoot());
         clockskinViewPager = binding.clockskinViewpager;
 
-        Uri watchfaceFolder = getLauncher().getStorageManager().getWatchfaceFolder();
+        DocumentFile watchfaceFolder = getLauncher().getStorageManager().getWatchfaceFolder();
         if (watchfaceFolder != null) {
             loadWatchfaces(watchfaceFolder);
         } else {
@@ -51,7 +51,7 @@ public class ClockSkinChooserActivity extends OpenWatchActivity {
         }
     }
 
-    private void loadWatchfaces(Uri watchfaceFolder) {
+    private void loadWatchfaces(DocumentFile watchfaceFolder) {
         final ClockSkinPagerAdapter clockSkinChooserAdapter = new ClockSkinPagerAdapter(getClockSkinsInfo(watchfaceFolder), item -> {
             Intent i = new Intent();
             i.setData(item.getFile().getUri());
@@ -72,7 +72,7 @@ public class ClockSkinChooserActivity extends OpenWatchActivity {
                 Log.d(TAG, "onActivityResult: Directory permissions OK!");
                 if (data != null) {
                     getLauncher().getStorageManager().setWatchfaceFolder(data);
-                    loadWatchfaces(data.getData());
+                    loadWatchfaces(getLauncher().getStorageManager().getWatchfaceFolder());
                 } else {
                     Log.d(TAG, "onActivityResult: data is null!");
                     Toast.makeText(this, "Something went wrong...", Toast.LENGTH_SHORT).show();
@@ -87,12 +87,10 @@ public class ClockSkinChooserActivity extends OpenWatchActivity {
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    private List<OpenWatchWatchFaceFile> getClockSkinsInfo(Uri watchfaceFolder) {
+    private List<OpenWatchWatchFaceFile> getClockSkinsInfo(DocumentFile watchfaceFolder) {
         List<OpenWatchWatchFaceFile> clockSkins = new ArrayList<>();
 
-        DocumentFile folder = DocumentFile.fromTreeUri(this, watchfaceFolder);
-        DocumentFile[] files = folder.listFiles();
-
+        DocumentFile[] files = watchfaceFolder.listFiles();
         if (files != null) {
             for (DocumentFile f : files) {
                 if (!f.getName().endsWith(OpenWatchWatchFaceConstants.WATCH_FACE_FILE_EXTENSION)) continue;

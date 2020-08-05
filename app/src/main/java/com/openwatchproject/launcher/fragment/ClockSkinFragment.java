@@ -57,7 +57,7 @@ public class ClockSkinFragment extends Fragment {
             Intent clockSkinChooserIntent = new Intent(getContext(), ClockSkinChooserActivity.class);
             final OpenWatchWatchFace currentWatchFace = clockSkinView.getWatchFace();
             if (currentWatchFace != null) {
-                clockSkinChooserIntent.putExtra(ClockSkinChooserActivity.EXTRA_CURRENT_CLOCKSKIN, currentWatchFace.getAbsolutePath());
+                clockSkinChooserIntent.putExtra(ClockSkinChooserActivity.EXTRA_CURRENT_CLOCKSKIN, currentWatchFace.getAbsolutePath().toString());
             }
             startActivityForResult(clockSkinChooserIntent, REQUEST_CODE_CHOOSE_CLOCK_SKIN);
             return true;

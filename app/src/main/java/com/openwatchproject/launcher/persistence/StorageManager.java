@@ -5,9 +5,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.UriPermission;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Environment;
 import android.provider.DocumentsContract;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.documentfile.provider.DocumentFile;
+
+import java.io.File;
 
 public class StorageManager {
     private static final String TAG = "StorageManager";
@@ -23,14 +28,18 @@ public class StorageManager {
         this.sharedPreferences = context.getSharedPreferences(STORAGE_PREFERENCES, Context.MODE_PRIVATE);
     }
 
-    public Uri getWatchfaceFolder() {
-        String uri = sharedPreferences.getString(WATCHFACE_FOLDER_PREFERENCE, null);
-        if (uri != null) {
-            for (UriPermission up : context.getContentResolver().getPersistedUriPermissions()) {
-                if (up.getUri().toString().equals(uri)) {
-                    return up.getUri();
+    public DocumentFile getWatchfaceFolder() {
+        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            String uri = sharedPreferences.getString(WATCHFACE_FOLDER_PREFERENCE, null);
+            if (uri != null) {
+                for (UriPermission up : context.getContentResolver().getPersistedUriPermissions()) {
+                    if (up.getUri().toString().equals(uri)) {
+                        return DocumentFile.fromTreeUri(context, up.getUri());
+                    }
                 }
             }
+        } else {
+            return DocumentFile.fromFile(new File(Environment.getExternalStorageDirectory(), "clockskin"));
         }
 
         return null;
