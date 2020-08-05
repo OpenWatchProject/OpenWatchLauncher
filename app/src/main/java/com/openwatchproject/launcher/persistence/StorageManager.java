@@ -29,7 +29,7 @@ public class StorageManager {
     }
 
     public DocumentFile getWatchfaceFolder() {
-        if (false && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             String uri = sharedPreferences.getString(WATCHFACE_FOLDER_PREFERENCE, null);
             if (uri != null) {
                 for (UriPermission up : context.getContentResolver().getPersistedUriPermissions()) {
