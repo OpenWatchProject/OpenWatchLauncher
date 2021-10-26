@@ -1,0 +1,3 @@
+[submodule "OpenWatchFace-View"]
+	path = OpenWatchFace-View
+	url = git@github.com:OpenWatchProject/OpenWatchFace-View.git

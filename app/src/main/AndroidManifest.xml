@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.openwatchproject.launcher">
+    package="org.openwatchproject.launcher">
 
     <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
 
     <application
-        android:name=".OpenWatchLauncher"
+        android:name="org.openwatchproject.launcher.OpenWatchLauncher"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
@@ -14,10 +14,10 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".activity.FullscreenDialogActivity" />
-        <activity android:name=".activity.OnboardingActivity" />
-        <activity android:name=".activity.ClockSkinChooserActivity" />
-        <activity android:name=".activity.MainActivity">
+        <activity android:name="org.openwatchproject.launcher.activity.FullscreenDialogActivity" />
+        <activity android:name="org.openwatchproject.launcher.activity.OnboardingActivity" />
+        <activity android:name="org.openwatchproject.launcher.activity.ClockSkinChooserActivity" />
+        <activity android:name="org.openwatchproject.launcher.activity.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -28,7 +28,7 @@
         </activity>
 
         <service
-            android:name=".notification.NLService"
+            android:name="org.openwatchproject.launcher.notification.NLService"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />

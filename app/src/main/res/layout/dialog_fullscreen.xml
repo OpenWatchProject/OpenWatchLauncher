@@ -4,7 +4,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="350dp"
     android:layout_height="350dp"
-    tools:context=".activity.FullscreenDialogActivity">
+    tools:context="org.openwatchproject.launcher.activity.FullscreenDialogActivity">
 
     <TextView
         android:id="@+id/title"

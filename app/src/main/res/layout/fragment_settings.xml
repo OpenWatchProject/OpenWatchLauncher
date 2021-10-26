@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:gravity="center"
     android:orientation="vertical"
-    tools:context=".fragment.SettingsFragment">
+    tools:context="org.openwatchproject.launcher.fragment.SettingsFragment">
 
     <Button
         android:id="@+id/open_notification_settings"
