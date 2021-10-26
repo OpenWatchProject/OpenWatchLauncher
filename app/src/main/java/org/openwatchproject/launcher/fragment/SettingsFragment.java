@@ -13,25 +13,21 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import org.openwatchproject.launcher.R;
-import org.openwatchproject.launcher.databinding.FragmentSettingsBinding;
-
 public class SettingsFragment extends Fragment {
 
-    private FragmentSettingsBinding binding;
     private Button openNotificationSettings;
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        binding = FragmentSettingsBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        return inflater.inflate(R.layout.fragment_settings, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        openNotificationSettings = binding.openNotificationSettings;
+        openNotificationSettings = view.findViewById(R.id.open_notification_settings);
         openNotificationSettings.setOnClickListener(v ->
                 startActivity(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)));
     }

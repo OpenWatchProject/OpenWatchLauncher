@@ -21,13 +21,9 @@ import androidx.viewpager2.adapter.FragmentStateAdapter;
 import androidx.viewpager2.widget.ViewPager2;
 
 import org.openwatchproject.launcher.R;
-import org.openwatchproject.launcher.databinding.ActivityOnboardingBinding;
-import org.openwatchproject.launcher.databinding.FragmentPagerBinding;
 
 public class OnboardingActivity extends AppCompatActivity {
     public static final String PREF_USER_FIRST_TIME = "user_first_time";
-
-    private ActivityOnboardingBinding binding;
 
     private ViewPager2 mViewPager;
     private ImageButton mNextBtn;
@@ -38,24 +34,27 @@ public class OnboardingActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityOnboardingBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_onboarding);
 
-        mNextBtn = binding.introBtnNext;
-        mPrevBtn = binding.introBtnSkip;
-        indicators = new ImageView[]{binding.introIndicator0, binding.introIndicator1, binding.introIndicator2};
+        mNextBtn = findViewById(R.id.intro_btn_next);
+        mPrevBtn = findViewById(R.id.intro_btn_skip);
+        indicators = new ImageView[]{
+                findViewById(R.id.intro_indicator_0),
+                findViewById(R.id.intro_indicator_1),
+                findViewById(R.id.intro_indicator_2)
+        };
 
         // Create the adapter that will return a fragment for each of the three
         // primary sections of the activity.
         mSectionsPagerAdapter = new SectionsStateAdapter(this);
 
         // Set up the ViewPager with the sections adapter.
-        mViewPager = binding.viewPager;
+        mViewPager = findViewById(R.id.view_pager);
         mViewPager.setAdapter(mSectionsPagerAdapter);
         mViewPager.setCurrentItem(0);
         updateIndicators(0);
 
-        final ConstraintLayout mainContent = binding.mainContent;
+        final ConstraintLayout mainContent = findViewById(R.id.main_content);
         final int color1 = ContextCompat.getColor(this, R.color.cyan);
         final int color2 = ContextCompat.getColor(this, R.color.orange);
         final int color3 = ContextCompat.getColor(this, R.color.green);
@@ -120,8 +119,6 @@ public class OnboardingActivity extends AppCompatActivity {
         private static final String ARG_SECTION_PERMISSION = "SECTION_PERMISSION";
         private static final String ARG_SECTION_IMG = "SECTION_IMG";
 
-        private FragmentPagerBinding binding;
-
         /**
          * Returns a new instance of this fragment for the given section
          * number.
@@ -157,19 +154,18 @@ public class OnboardingActivity extends AppCompatActivity {
         @Override
         public View onCreateView(LayoutInflater inflater, ViewGroup container,
                                  Bundle savedInstanceState) {
-            binding = FragmentPagerBinding.inflate(inflater, container, false);
-            return binding.getRoot();
+            return inflater.inflate(R.layout.fragment_pager, container, false);
         }
 
         @Override
         public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-            TextView label = binding.sectionLabel;
+            TextView label = view.findViewById(R.id.section_label);
             label.setText(getArguments().getString(ARG_SECTION_LABEL));
 
-            TextView description = binding.sectionDescription;
+            TextView description = view.findViewById(R.id.section_description);
             description.setText(getArguments().getString(ARG_SECTION_DESCRIPTION));
 
-            ImageView img = binding.sectionImg;
+            ImageView img = view.findViewById(R.id.section_img);
             img.setBackgroundResource(getArguments().getInt(ARG_SECTION_IMG));
         }
     }

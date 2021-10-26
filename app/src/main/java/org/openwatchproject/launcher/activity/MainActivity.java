@@ -9,8 +9,8 @@ import android.view.KeyEvent;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import org.openwatchproject.launcher.R;
 import org.openwatchproject.launcher.adapter.HorizontalViewPagerAdapter;
-import org.openwatchproject.launcher.databinding.ActivityMainBinding;
 import org.openwatchproject.launcher.view.HorizontalViewPager;
 
 public class MainActivity extends AppCompatActivity {
@@ -30,10 +30,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        final ActivityMainBinding binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_main);
 
-        horizontalViewPager = binding.horizontalViewPager;
+        horizontalViewPager = findViewById(R.id.horizontal_view_pager);
         final HorizontalViewPagerAdapter pagerAdapter = new HorizontalViewPagerAdapter(getSupportFragmentManager());
         horizontalViewPager.setAdapter(pagerAdapter);
         horizontalViewPager.setCurrentItem(1);

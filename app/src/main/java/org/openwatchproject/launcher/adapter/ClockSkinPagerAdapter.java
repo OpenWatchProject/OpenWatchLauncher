@@ -9,10 +9,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.viewpager.widget.PagerAdapter;
 
+import org.openwatchproject.launcher.R;
 import org.openwatchproject.launcher.Utils;
 import org.openwatchproject.launcher.activity.FullscreenDialogActivity;
-import org.openwatchproject.launcher.databinding.ClockskinItemBinding;
 import org.openwatchproject.launcher.listener.ClockSkinInfoClickListener;
+import org.openwatchproject.openwatchfaceview.OpenWatchFaceFile;
 
 import java.util.List;
 
@@ -29,17 +30,17 @@ public class ClockSkinPagerAdapter extends PagerAdapter {
     @NonNull
     @Override
     public Object instantiateItem(@NonNull ViewGroup container, int position) {
-        ClockskinItemBinding binding = ClockskinItemBinding.inflate(LayoutInflater.from(container.getContext()), container, false);
+        View view = LayoutInflater.from(container.getContext()).inflate(R.layout.clockskin_item, container, false);
 
         OpenWatchFaceFile watchFace = this.watchFace.get(position);
 
-        final TextView name = binding.name;
+        final TextView name = view.findViewById(R.id.name);
         name.setSelected(true);
         Utils.fixRoundScreenWidth(name);
-        final TextView metadata = binding.metadata;
+        final TextView metadata = view.findViewById(R.id.metadata);
         Utils.fixRoundScreenWidth(metadata);
-        final ImageView preview = binding.preview;
-        final ImageView removeButton = binding.removeButton;
+        final ImageView preview = view.findViewById(R.id.preview);
+        final ImageView removeButton = view.findViewById(R.id.remove_button);
 
         name.setText(watchFace.getMetadata().getName());
         if (watchFace.getMetadata().getAuthor().isEmpty()) {
@@ -72,7 +73,6 @@ public class ClockSkinPagerAdapter extends PagerAdapter {
             }
         });
 
-        final View view = binding.getRoot();
         view.setOnClickListener(v -> clickListener.onClick(watchFace));
         container.addView(view);
         return view;

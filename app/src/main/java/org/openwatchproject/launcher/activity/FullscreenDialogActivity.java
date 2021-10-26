@@ -9,7 +9,7 @@ import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatDialog;
 
-import org.openwatchproject.launcher.databinding.DialogFullscreenBinding;
+import org.openwatchproject.launcher.R;
 
 public class FullscreenDialogActivity extends AppCompatDialog {
 
@@ -27,21 +27,30 @@ public class FullscreenDialogActivity extends AppCompatDialog {
         super(context);
     }
 
+    public FullscreenDialogActivity(Context context, int theme) {
+        super(context, theme);
+    }
+
+    protected FullscreenDialogActivity(Context context, boolean cancelable, OnCancelListener cancelListener) {
+        super(context, cancelable, cancelListener);
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        final DialogFullscreenBinding binding = DialogFullscreenBinding.inflate(getLayoutInflater());
-        binding.getRoot().setBackgroundColor(Color.BLACK);
-        setContentView(binding.getRoot());
+        setContentView(R.layout.dialog_fullscreen);
+        findViewById(R.id.content).setBackgroundColor(Color.BLACK);
 
-        titleTv = binding.title;
+        titleTv = findViewById(R.id.title);
         if (title != null) titleTv.setText(title);
-        descriptionTv = binding.description;
+        descriptionTv = findViewById(R.id.description);
         if (description != null) descriptionTv.setText(description);
-        positiveButtonView = binding.positiveButton;
-        if (positiveClickListener != null) positiveButtonView.setOnClickListener(positiveClickListener);
-        negativeButtonView = binding.negativeButton;
-        if (negativeClickListener != null) negativeButtonView.setOnClickListener(negativeClickListener);
+        positiveButtonView = findViewById(R.id.positive_button);
+        if (positiveClickListener != null)
+            positiveButtonView.setOnClickListener(positiveClickListener);
+        negativeButtonView = findViewById(R.id.negative_button);
+        if (negativeClickListener != null)
+            negativeButtonView.setOnClickListener(negativeClickListener);
     }
 
     public FullscreenDialogActivity setTitle(String title) {

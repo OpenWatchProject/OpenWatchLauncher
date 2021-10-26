@@ -6,16 +6,14 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.viewpager.widget.ViewPager;
 
+import org.openwatchproject.launcher.R;
 import org.openwatchproject.launcher.adapter.ClockSkinPagerAdapter;
-import org.openwatchproject.launcher.databinding.ActivityClockSkinChooserBinding;
 import org.openwatchproject.launcher.persistence.StorageManager;
-import org.openwatchproject.openwatchface.OpenWatchFace;
-import org.openwatchproject.openwatchface.OpenWatchFaceConstants;
-import org.openwatchproject.openwatchface.OpenWatchFaceFile;
+import org.openwatchproject.openwatchfaceview.OpenWatchFaceConstants;
+import org.openwatchproject.openwatchfaceview.OpenWatchFaceFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,9 +29,8 @@ public class ClockSkinChooserActivity extends OpenWatchActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        final ActivityClockSkinChooserBinding binding = ActivityClockSkinChooserBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
-        clockskinViewPager = binding.clockskinViewpager;
+        setContentView(R.layout.activity_clock_skin_chooser);
+        clockskinViewPager = findViewById(R.id.clockskin_viewpager);
 
         DocumentFile watchfaceFolder = getLauncher().getStorageManager().getWatchfaceFolder();
         if (watchfaceFolder != null) {

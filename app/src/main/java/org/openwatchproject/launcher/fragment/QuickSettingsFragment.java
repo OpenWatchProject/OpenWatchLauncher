@@ -1,5 +1,15 @@
 package org.openwatchproject.launcher.fragment;
 
+import static android.telephony.PhoneStateListener.LISTEN_DATA_CONNECTION_STATE;
+import static android.telephony.PhoneStateListener.LISTEN_NONE;
+import static android.telephony.PhoneStateListener.LISTEN_SERVICE_STATE;
+import static android.telephony.PhoneStateListener.LISTEN_SIGNAL_STRENGTHS;
+import static android.telephony.TelephonyManager.DATA_CONNECTED;
+import static android.telephony.TelephonyManager.DATA_CONNECTING;
+import static android.telephony.TelephonyManager.DATA_DISCONNECTED;
+import static android.telephony.TelephonyManager.DATA_SUSPENDED;
+import static android.telephony.TelephonyManager.DATA_UNKNOWN;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -23,24 +33,12 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
+import org.openwatchproject.launcher.R;
 import org.openwatchproject.launcher.Utils;
-import org.openwatchproject.launcher.databinding.FragmentQuickSettingsBinding;
-import org.openwatchproject.launcher.databinding.FragmentVerticalViewPagerBinding;
-
-import static android.telephony.PhoneStateListener.LISTEN_DATA_CONNECTION_STATE;
-import static android.telephony.PhoneStateListener.LISTEN_NONE;
-import static android.telephony.PhoneStateListener.LISTEN_SERVICE_STATE;
-import static android.telephony.PhoneStateListener.LISTEN_SIGNAL_STRENGTHS;
-import static android.telephony.TelephonyManager.DATA_CONNECTED;
-import static android.telephony.TelephonyManager.DATA_CONNECTING;
-import static android.telephony.TelephonyManager.DATA_DISCONNECTED;
-import static android.telephony.TelephonyManager.DATA_SUSPENDED;
-import static android.telephony.TelephonyManager.DATA_UNKNOWN;
 
 public class QuickSettingsFragment extends Fragment {
     private static final String TAG = "QuickSettingsFragment";
 
-    private FragmentQuickSettingsBinding binding;
     private ProgressBar batteryProgress;
 
     private TextView carrierName;
@@ -54,25 +52,24 @@ public class QuickSettingsFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        binding = FragmentQuickSettingsBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        return inflater.inflate(R.layout.fragment_quick_settings, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        batteryStatus = binding.batteryStatus;
-        batteryProgress = binding.progressBar;
+        batteryStatus = view.findViewById(R.id.battery_status);
+        batteryProgress = view.findViewById(R.id.progressBar);
 
         int minDisplaySize = getMinDisplaySize();
         batteryProgress.getLayoutParams().height = minDisplaySize;
         batteryProgress.getLayoutParams().width = minDisplaySize;
 
-        carrierName = binding.carrierName;
-        signalStrength = binding.signalStrength;
-        connectionState = binding.connectionState;
-        networkType = binding.networkType;
+        carrierName = view.findViewById(R.id.carrier_name);
+        signalStrength = view.findViewById(R.id.signal_strength);
+        connectionState = view.findViewById(R.id.connection_state);
+        networkType = view.findViewById(R.id.network_type);
 
         telephonyManager = (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
 

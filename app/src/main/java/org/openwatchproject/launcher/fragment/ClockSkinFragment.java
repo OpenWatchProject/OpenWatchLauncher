@@ -14,16 +14,15 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
-import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
 import org.openwatchproject.launcher.activity.ClockSkinChooserActivity;
 import org.openwatchproject.launcher.model.WearWatchFace;
-import org.openwatchproject.openwatchface.OpenWatchFace;
-import org.openwatchproject.openwatchface.OpenWatchFaceFile;
-import org.openwatchproject.openwatchface.OpenWatchFaceView;
+import org.openwatchproject.openwatchfaceview.OpenWatchFace;
+import org.openwatchproject.openwatchfaceview.OpenWatchFaceFile;
+import org.openwatchproject.openwatchfaceview.OpenWatchFaceView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,12 +44,11 @@ public class ClockSkinFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         clockSkinView = (OpenWatchFaceView) view;
-        clockSkinView.setOnClickListener(clockSkinView.onClickListener); // TODO: FIX THIS! DOESN'T WORK IF ATTACHED FROM INSIDE.
         clockSkinView.setOnLongClickListener(view1 -> {
             Intent clockSkinChooserIntent = new Intent(getContext(), ClockSkinChooserActivity.class);
             final OpenWatchFace currentWatchFace = clockSkinView.getWatchFace();
             if (currentWatchFace != null) {
-                clockSkinChooserIntent.putExtra(ClockSkinChooserActivity.EXTRA_CURRENT_CLOCKSKIN, currentWatchFace.getAbsolutePath().toString());
+                clockSkinChooserIntent.putExtra(ClockSkinChooserActivity.EXTRA_CURRENT_CLOCKSKIN, currentWatchFace.getPath().toString());
             }
             startActivityForResult(clockSkinChooserIntent, REQUEST_CODE_CHOOSE_CLOCK_SKIN);
             return true;

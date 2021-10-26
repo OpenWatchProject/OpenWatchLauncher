@@ -27,7 +27,7 @@
                     android:top="@dimen/button_padding_vertical_material"
                     android:right="@dimen/button_padding_horizontal_material"
                     android:bottom="@dimen/button_padding_vertical_material" />
-                <solid android:color="@color/white" />
+                <solid android:color="@android:color/white" />
                 <stroke
                     android:width="@dimen/emphasized_button_stroke_width"
                     android:color="@color/material_grey_300" />

@@ -3,12 +3,12 @@ plugins {
 }
 
 android {
-    compileSdk 30
+    compileSdk 31
 
     defaultConfig {
         applicationId "org.openwatchproject.launcher"
         minSdk 24
-        targetSdk 30
+        targetSdk 31
         versionCode 1
         versionName "1.0"
 
@@ -33,9 +33,12 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.1.1'
     implementation 'androidx.wear:wear:1.2.0'
     implementation 'androidx.room:room-runtime:2.3.0'
+    implementation 'androidx.documentfile:documentfile:1.0.1'
     annotationProcessor 'androidx.room:room-compiler:2.3.0'
     implementation 'androidx.viewpager2:viewpager2:1.0.0'
-    implementation 'com.github.OpenWatchProject:OpenWatchFaceView:1.0'
+    implementation 'com.github.OpenWatchProject:OpenWatchFaceView:master-SNAPSHOT'
+    implementation 'io.reactivex.rxjava3:rxjava:3.0.0'
+    implementation 'androidx.room:room-rxjava3:2.3.0'
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test:runner:1.4.0'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.4.0'

@@ -16,10 +16,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.LinearSnapHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
-import org.openwatchproject.launcher.notification.NotificationHelper;
 import org.openwatchproject.launcher.OpenWatchLauncher;
+import org.openwatchproject.launcher.R;
 import org.openwatchproject.launcher.notification.NotificationAdapter;
-import org.openwatchproject.launcher.databinding.FragmentNotificationsBinding;
+import org.openwatchproject.launcher.notification.NotificationHelper;
 import org.openwatchproject.launcher.notification.OpenWatchNotification;
 
 public class NotificationsFragment extends Fragment {
@@ -64,15 +64,15 @@ public class NotificationsFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        FragmentNotificationsBinding binding = FragmentNotificationsBinding.inflate(inflater, container, false);
-        noNotificationsText = binding.noNotificationsText;
-        notificationsRecyclerView = binding.notificationsRecyclerView;
-        return binding.getRoot();
+        return inflater.inflate(R.layout.fragment_notifications, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+
+        noNotificationsText = view.findViewById(R.id.no_notifications_text);
+        notificationsRecyclerView = view.findViewById(R.id.notifications_recycler_view);
 
         notificationsRecyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         new LinearSnapHelper().attachToRecyclerView(notificationsRecyclerView);

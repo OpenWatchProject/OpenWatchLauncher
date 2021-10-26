@@ -26,8 +26,9 @@ import androidx.room.Room;
 import androidx.wear.widget.WearableLinearLayoutManager;
 import androidx.wear.widget.WearableRecyclerView;
 
+import org.openwatchproject.launcher.R;
+import org.openwatchproject.launcher.Utils;
 import org.openwatchproject.launcher.adapter.LauncherAdapter;
-import org.openwatchproject.launcher.databinding.FragmentLauncherBinding;
 import org.openwatchproject.launcher.listener.LauncherItemClickListener;
 import org.openwatchproject.launcher.listener.LauncherItemLongClickListener;
 import org.openwatchproject.launcher.model.LauncherItem;
@@ -39,16 +40,12 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 
-import io.reactivex.CompletableObserver;
-import io.reactivex.disposables.Disposable;
-import io.reactivex.schedulers.Schedulers;
-
-import org.openwatchproject.launcher.Utils;
+import io.reactivex.rxjava3.core.CompletableObserver;
+import io.reactivex.rxjava3.disposables.Disposable;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 public class LauncherFragment extends Fragment {
     private static final String TAG = "LauncherFragment";
-
-    private FragmentLauncherBinding binding;
 
     private WearableRecyclerView wearableRecyclerView;
     private LauncherAdapter launcherAdapter;
@@ -132,15 +129,14 @@ public class LauncherFragment extends Fragment {
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        binding = FragmentLauncherBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        return inflater.inflate(R.layout.fragment_launcher, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        wearableRecyclerView = binding.wearableRecyclerView;
+        wearableRecyclerView = view.findViewById(R.id.wearable_recycler_view);
         wearableRecyclerView.setEdgeItemsCenteringEnabled(true);
         wearableRecyclerView.setLayoutManager(new WearableLinearLayoutManager(getContext()));
         wearableRecyclerView.setAdapter(launcherAdapter);
